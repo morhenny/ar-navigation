@@ -1,0 +1,23 @@
+<resources>
+    <string name="app_name">AR-Navigation</string>
+    <string name="fab_add_descr">FAB to add a place</string>
+    <string name="fab_route_descr">FAB to launch maps route</string>
+    <string name="fab_my_location_descr">"FAB Find my location "</string>
+    <string name="input_name_hint">Name:</string>
+    <string name="input_description_hint">Description:</string>
+    <string name="input_lat_hint">Latitude:</string>
+    <string name="input_lng_hint">Longitude:</string>
+    <string name="input_author_hint">Author:</string>
+    <string name="error_cannot_be_empty">Cannot be empty</string>
+    <string name="button_update_place">Update</string>
+    <string name="button_upload_place">Upload</string>
+    <string name="button_delete_place">Delete</string>
+    <string name="select_position_title">Anchor</string>
+    <string name="permissions_rationale">Permissions are required for this app to be used</string>
+    <string name="camera_rationale">This app requires the Camera permission to be used</string>
+    <string name="location_rationale">This app requires the Location permission to be used</string>
+    <string name="route_dialog_title">Do you want to start the AR-Navigation?</string>
+    <string name="button_edit_ar_data">Redo Route</string>
+    <string name="button_create_ar_data">Create Route</string>
+    <string name="button_try_ar_route">Try route</string>
+</resources>

@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+
+    android:id="@+id/arFragment"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <com.google.android.material.textview.MaterialTextView
+        android:id="@+id/ar_info_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="12dp"
+        android:background="@drawable/rounded_corners"
+        android:elevation="2dp"
+        android:paddingVertical="8dp"
+        android:text="Here, all the toasts and status will be shown"
+        android:textAlignment="center"
+        android:textColor="@color/white"
+        android:textSize="14sp"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <io.github.sceneview.ar.ArSceneView
+        android:id="@+id/sceneView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:elevation="1dp" />
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/ar_content_layout"
+        android:layout_width="0dp"
+        android:layout_height="140dp"
+        android:layout_margin="12dp"
+        android:background="@drawable/rounded_corners"
+        android:elevation="2dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintLeft_toLeftOf="parent">
+
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/ar_node_list"
+            android:layout_width="150dp"
+            android:layout_height="match_parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <LinearLayout
+            android:layout_width="50dp"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            app:layout_constraintLeft_toRightOf="@id/ar_node_list"
+            app:layout_constraintRight_toLeftOf="@id/ar_button_layout"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <FrameLayout
+                android:id="@+id/ar_model_frame_s"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_margin="4dp"
+                android:background="@drawable/rounded_corners"
+                android:visibility="gone">
+
+                <ImageView
+                    android:id="@+id/ar_model_icon_s"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:padding="6dp"
+                    android:src="@drawable/ic_baseline_photo_size_select_large_24"
+                    android:visibility="visible" />
+            </FrameLayout>
+
+            <FrameLayout
+                android:id="@+id/ar_model_frame_m"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_margin="4dp"
+                android:background="@drawable/rounded_corners_highlighted"
+                android:visibility="gone">
+
+                <ImageView
+                    android:id="@+id/ar_model_icon_m"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:padding="4dp"
+                    android:src="@drawable/ic_baseline_photo_size_select_large_24" />
+            </FrameLayout>
+
+            <FrameLayout
+                android:id="@+id/ar_model_frame_l"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_margin="4dp"
+                android:background="@drawable/rounded_corners"
+                android:visibility="gone">
+
+                <ImageView
+                    android:id="@+id/ar_model_icon_l"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:padding="0dp"
+                    android:src="@drawable/ic_baseline_photo_size_select_large_24" />
+            </FrameLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/ar_button_layout"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintRight_toRightOf="parent">
+
+            <Button
+                android:id="@+id/ar_button_resolve"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:text="RESOLVE" />
+
+            <Button
+                android:id="@+id/ar_button_undo"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:enabled="false"
+                android:text="UNDO" />
+
+            <Button
+                android:id="@+id/ar_button_clear"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:text="CLEAR" />
+
+            <Button
+                android:id="@+id/ar_button_confirm"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:text="CONFIRM" />
+
+            <Button
+                android:id="@+id/ar_button_done"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:text="DONE" />
+
+        </LinearLayout>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <com.nambimobile.widgets.efab.ExpandableFabLayout
+        android:id="@+id/ar_fab_layout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:elevation="6dp"
+        android:visibility="gone">
+
+        <com.nambimobile.widgets.efab.Overlay
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <com.nambimobile.widgets.efab.ExpandableFab
+            android:id="@+id/ar_fab_main"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|end"
+            android:layout_margin="12dp"
+            app:efab_icon="@drawable/ic_baseline_add_24" />
+
+        <com.nambimobile.widgets.efab.FabOption
+            android:id="@+id/ar_fab_arrow_forward"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:fab_icon="@drawable/ic_baseline_arrow_upward_24"
+            app:fab_openingAnimationDurationMs="0"
+            app:label_hiddenToVisibleAnimationDurationMs="50"
+            app:label_text="Forward" />
+
+        <com.nambimobile.widgets.efab.FabOption
+            android:id="@+id/ar_fab_arrow_right"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:fab_icon="@drawable/ic_baseline_arrow_forward_24"
+            app:fab_openingAnimationDurationMs="0"
+            app:label_hiddenToVisibleAnimationDurationMs="50"
+            app:label_text="Right" />
+
+        <com.nambimobile.widgets.efab.FabOption
+            android:id="@+id/ar_fab_arrow_left"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:fab_icon="@drawable/ic_baseline_arrow_back_24"
+            app:fab_openingAnimationDurationMs="00"
+            app:label_hiddenToVisibleAnimationDurationMs="50"
+            app:label_text="Left" />
+
+        <com.nambimobile.widgets.efab.FabOption
+            android:id="@+id/ar_fab_target"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:fab_icon="@drawable/ic_baseline_emoji_flags_24"
+            app:fab_openingAnimationDurationMs="00"
+            app:label_hiddenToVisibleAnimationDurationMs="50"
+            app:label_text="Target" />
+
+    </com.nambimobile.widgets.efab.ExpandableFabLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

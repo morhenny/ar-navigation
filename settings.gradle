@@ -1,0 +1,2 @@
+rootProject.name = "AR-Navigation"
+include ':app'

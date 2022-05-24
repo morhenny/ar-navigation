@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/nav_graph.xml"
+    app:startDestination="@id/mapsFragment">
+    <fragment
+        android:id="@+id/mapsFragment"
+        android:name="de.morhenn.ar_navigation.MapsFragment"
+        android:label="MapsFragment">
+        <action
+            android:id="@+id/action_mapsFragment_to_arFragment"
+            app:destination="@id/arFragment" />
+        <action
+            android:id="@+id/action_mapsFragment_to_createFragment"
+            app:destination="@id/createFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/arFragment"
+        android:name="de.morhenn.ar_navigation.AugmentedRealityFragment"
+        android:label="ArFragment">
+        <action
+            android:id="@+id/action_arFragment_to_mapsFragment"
+            app:popUpTo="@id/mapsFragment"
+            app:destination="@id/mapsFragment" />
+        <action
+            android:id="@+id/action_arFragment_to_createFragment"
+            app:popUpTo="@id/createFragment"
+            app:destination="@id/createFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/createFragment"
+        android:name="de.morhenn.ar_navigation.CreateFragment"
+        android:label="CreateFragment">
+        <action
+            android:id="@+id/action_createFragment_to_mapsFragment"
+            app:popUpTo="@id/mapsFragment"
+            app:destination="@id/mapsFragment" />
+        <action
+            android:id="@+id/action_createFragment_to_arFragment"
+            app:destination="@id/arFragment" />
+    </fragment>
+</navigation>
