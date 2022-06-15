@@ -81,7 +81,6 @@ dependencies {
     implementation "androidx.lifecycle:lifecycle-livedata-ktx:2.3.1"
 
     // AR
-    //implementation "com.gorisse.thomas.sceneform:sceneform:1.20.2" //deprecated
     implementation 'io.github.sceneview:arsceneview:0.6.0'
 
     // ExpandableFab

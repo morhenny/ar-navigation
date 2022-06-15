@@ -82,7 +82,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginEnd="4dp"
-            android:text="@string/button_create_ar_data" />
+            android:text="@string/button_cancel_and_redo_ar" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/button_try_ar_route"
@@ -99,8 +99,9 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginEnd="8dp"
+        android:enabled="false"
         android:hint="@string/input_lat_hint"
-        app:layout_constraintEnd_toStartOf="@id/button_sync_location"
+        app:layout_constraintEnd_toStartOf="@id/input_lng_layout"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/layout_ar_data">
 
@@ -111,35 +112,55 @@
             android:inputType="numberDecimal" />
     </com.google.android.material.textfield.TextInputLayout>
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/button_sync_location"
-        android:layout_width="36dp"
-        android:layout_height="0dp"
-        android:layout_marginVertical="8dp"
-        android:insetLeft="0dp"
-        android:insetTop="0dp"
-        android:insetRight="0dp"
-        android:insetBottom="0dp"
-        app:icon="@drawable/ic_baseline_sync_24"
-        app:iconGravity="textStart"
-        app:iconPadding="0dp"
-        app:layout_constraintBottom_toTopOf="@id/map_pick_location"
-        app:layout_constraintEnd_toStartOf="@id/input_lng_layout"
-        app:layout_constraintStart_toEndOf="@id/input_lat_layout"
-        app:layout_constraintTop_toBottomOf="@id/layout_ar_data" />
-
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/input_lng_layout"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="8dp"
+        android:enabled="false"
         android:hint="@string/input_lng_hint"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@id/button_sync_location"
+        app:layout_constraintStart_toEndOf="@id/input_lat_layout"
         app:layout_constraintTop_toBottomOf="@id/layout_ar_data">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/input_lng"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="numberDecimal" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/input_alt_layout"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="8dp"
+        android:enabled="false"
+        android:hint="@string/input_alt_hint"
+        app:layout_constraintEnd_toStartOf="@id/input_hdg_layout"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/input_lat_layout">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/input_alt"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="numberDecimal" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/input_hdg_layout"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:enabled="false"
+        android:hint="@string/input_hdg_hint"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@id/input_alt_layout"
+        app:layout_constraintTop_toBottomOf="@id/input_lng_layout">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/input_hdg"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:inputType="numberDecimal" />
@@ -153,7 +174,7 @@
         app:layout_constraintBottom_toTopOf="@id/button_create"
         app:layout_constraintEnd_toStartOf="parent"
         app:layout_constraintStart_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/input_lat_layout" />
+        app:layout_constraintTop_toBottomOf="@id/input_alt_layout" />
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/button_delete"

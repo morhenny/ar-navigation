@@ -16,10 +16,12 @@ class MainViewModel : ViewModel() {
     enum class NavState {
         NONE,
         CREATE_TO_AR_TO_TRY,
-        CREATE_TO_AR_NEW,
-        CREATE_TO_AR_REDO,
-        MAPS_TO_AR,
+        MAPS_TO_AR_NEW,
+        MAPS_TO_AR_NAV,
+        MAPS_TO_EDIT,
+
     }
+
     var navState = NavState.NONE
 
     private val db: AppDatabase = AppDatabase.getInstance()
@@ -28,9 +30,10 @@ class MainViewModel : ViewModel() {
     var currentPlace: Place? = null
     var arDataString: String = ""
 
-    var bearingToAnchor: Float = 0f
-    var distanceToAnchor: Float = 0f
-    var degreeToNorth: Float = 0f
+    var geoLat = 0.0
+    var geoLng = 0.0
+    var geoAlt = 0.0
+    var geoHdg = 0.0
 
     private val _openEdit = MutableLiveData<SimpleEvent>()
     val openEdit: LiveData<SimpleEvent>
@@ -63,13 +66,20 @@ class MainViewModel : ViewModel() {
         arDataString = currentPlace?.ardata ?: ""
     }
 
-    fun clearCurrentPlace(){
+    fun clearCurrentPlace() {
         currentPlace = null
         arDataString = ""
     }
 
     fun fetchPlaces() {
         placeRepository.getPlaces()
+    }
+
+    fun clearGeo() {
+        geoHdg = 0.0
+        geoAlt = 0.0
+        geoLat = 0.0
+        geoLng = 0.0
     }
 
 }

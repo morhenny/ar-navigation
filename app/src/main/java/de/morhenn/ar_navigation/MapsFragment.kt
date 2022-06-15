@@ -93,18 +93,22 @@ class MapsFragment : Fragment(), OnMapReadyCallback, SensorEventListener {
         }
         createFab = binding.mapAddFab
         createFab.setOnClickListener {
-            selectedMarker?.let {
-                viewModel.updateCurrentPlace(it)
-            } ?: viewModel.clearCurrentPlace()
-            findNavController().navigate(MapsFragmentDirections.actionMapsFragmentToCreateFragment())
+            if (selectedMarker != null) {
+                viewModel.updateCurrentPlace(selectedMarker!!)
+                viewModel.navState = MainViewModel.NavState.MAPS_TO_EDIT
+                findNavController().navigate(MapsFragmentDirections.actionMapsFragmentToCreateFragment())
+            } else {
+                viewModel.clearCurrentPlace()
+                viewModel.navState = MainViewModel.NavState.MAPS_TO_AR_NEW
+                findNavController().navigate(MapsFragmentDirections.actionMapsFragmentToArFragment())
+            }
         }
-        createFab.setOnLongClickListener {
+        createFab.setOnLongClickListener { //TODO debug only
             val rotationMatrix = FloatArray(9)
             SensorManager.getRotationMatrix(rotationMatrix, null, accelerometerReading, magnetometerReading)
             val orientationAngles = FloatArray(3)
             SensorManager.getOrientation(rotationMatrix, orientationAngles)
             val degreeToNorth = Math.toDegrees((orientationAngles[0].toDouble())) //Angle to true north from device
-            viewModel.degreeToNorth = degreeToNorth.toFloat()
             FileLog.d("O_O", "degrees: $degreeToNorth")
             true
         }
@@ -177,6 +181,7 @@ class MapsFragment : Fragment(), OnMapReadyCallback, SensorEventListener {
         }
         map.setOnInfoWindowLongClickListener { marker ->
             viewModel.updateCurrentPlace(marker)
+            viewModel.navState = MainViewModel.NavState.MAPS_TO_EDIT
             findNavController().navigate(MapsFragmentDirections.actionMapsFragmentToCreateFragment())
         }
         map.setOnMapClickListener {
@@ -286,8 +291,6 @@ class MapsFragment : Fragment(), OnMapReadyCallback, SensorEventListener {
                     if (distance >= MAX_DISTANCE_TO_START) {
                         startNavigationIntentToMarker(selectedMarker!!)
                     } else {
-                        viewModel.bearingToAnchor = bearingToAnchor
-                        viewModel.distanceToAnchor = distance
                         onLocationConfirmationDialog(view, distance)
                     }
                 }
@@ -307,9 +310,8 @@ class MapsFragment : Fragment(), OnMapReadyCallback, SensorEventListener {
             val orientationAngles = FloatArray(3)
             SensorManager.getOrientation(rotationMatrix, orientationAngles)
             val degreeToNorth = Math.toDegrees((orientationAngles[0].toDouble())) //Angle to true north from device
-            viewModel.degreeToNorth = degreeToNorth.toFloat()
 
-            viewModel.navState = MainViewModel.NavState.MAPS_TO_AR
+            viewModel.navState = MainViewModel.NavState.MAPS_TO_AR_NAV
             findNavController().navigate(MapsFragmentDirections.actionMapsFragmentToArFragment())
         }
         builder.setNegativeButton("Google Maps") { _, _ ->

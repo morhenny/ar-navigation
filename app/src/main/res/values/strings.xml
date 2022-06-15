@@ -18,6 +18,11 @@
     <string name="location_rationale">This app requires the Location permission to be used</string>
     <string name="route_dialog_title">Do you want to start the AR-Navigation?</string>
     <string name="button_edit_ar_data">Redo Route</string>
-    <string name="button_create_ar_data">Create Route</string>
+    <string name="button_cancel_and_redo_ar">Cancel and Redo</string>
     <string name="button_try_ar_route">Try route</string>
+
+    <string name="geospatial_pose" translatable="false">Camera: LAT/LNG: %.6f˚, %.6f˚\t\t\tACC: %.2fm\nALTITUDE: %.2fm\t\t\tACC: %.2fm\nHEADING: %.1f˚\t\t\tACC: %.1f˚</string>
+    <string name="geospatial_anchor" translatable="false">\nAnchor: LAT/LNG: %.6f˚, %.6f˚\t\t\tALTITUDE: %.2fm\nBEARING: %.1f˚\t\t\tDISTANCE: %.2fm</string>
+    <string name="input_alt_hint">Altitude:</string>
+    <string name="input_hdg_hint">Heading:</string>
 </resources>

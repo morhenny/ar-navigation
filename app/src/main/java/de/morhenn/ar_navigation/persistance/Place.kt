@@ -10,6 +10,8 @@ data class Place(
     var name: String,
     var lat: Double,
     var lng: Double,
+    var alt: Double,
+    var heading: Double,
     var description: String,
     var author: String,
     var ardata: String

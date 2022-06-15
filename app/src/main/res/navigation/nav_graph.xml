@@ -9,10 +9,12 @@
         android:label="MapsFragment">
         <action
             android:id="@+id/action_mapsFragment_to_arFragment"
-            app:destination="@id/arFragment" />
+            app:destination="@id/arFragment"
+            app:popUpTo="@id/arFragment" />
         <action
             android:id="@+id/action_mapsFragment_to_createFragment"
-            app:destination="@id/createFragment" />
+            app:destination="@id/createFragment"
+            app:popUpTo="@id/createFragment" />
     </fragment>
     <fragment
         android:id="@+id/arFragment"
@@ -20,12 +22,12 @@
         android:label="ArFragment">
         <action
             android:id="@+id/action_arFragment_to_mapsFragment"
-            app:popUpTo="@id/mapsFragment"
-            app:destination="@id/mapsFragment" />
+            app:destination="@id/mapsFragment"
+            app:popUpTo="@id/mapsFragment" />
         <action
             android:id="@+id/action_arFragment_to_createFragment"
-            app:popUpTo="@id/createFragment"
-            app:destination="@id/createFragment" />
+            app:destination="@id/createFragment"
+            app:popUpTo="@id/createFragment" />
     </fragment>
     <fragment
         android:id="@+id/createFragment"
@@ -33,10 +35,11 @@
         android:label="CreateFragment">
         <action
             android:id="@+id/action_createFragment_to_mapsFragment"
-            app:popUpTo="@id/mapsFragment"
-            app:destination="@id/mapsFragment" />
+            app:destination="@id/mapsFragment"
+            app:popUpTo="@id/mapsFragment" />
         <action
             android:id="@+id/action_createFragment_to_arFragment"
-            app:destination="@id/arFragment" />
+            app:destination="@id/arFragment"
+            app:popUpTo="@id/arFragment" />
     </fragment>
 </navigation>
