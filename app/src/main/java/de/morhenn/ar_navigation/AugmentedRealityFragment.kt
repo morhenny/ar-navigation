@@ -50,7 +50,7 @@ import kotlin.math.atan2
 class AugmentedRealityFragment : Fragment() {
     companion object {
         private const val TAG = "AR-Frag"
-        private const val RENDER_DISTANCE = 100f //default is 30
+        private const val RENDER_DISTANCE = 250f //default is 30
         private const val H_ACC_0 = 0.0
         private const val H_ACC_1 = 10
         private const val H_ACC_2 = 2.5
@@ -93,6 +93,7 @@ class AugmentedRealityFragment : Fragment() {
         CUBE,
         ANCHOR,
         ANCHOR_PREVIEW,
+        ANCHOR_PREVIEW_ARROW,
         TARGET,
         AXIS,
     }
@@ -123,6 +124,7 @@ class AugmentedRealityFragment : Fragment() {
 
     private var earthAnchorPlaced = false
     private var earthNode: ArNode? = null
+    private var previewArrow: ArNode? = null
 
     private var appState: AppState = AppState.STARTING_AR
     private var selectedModel: ModelName = ANCHOR
@@ -134,7 +136,6 @@ class AugmentedRealityFragment : Fragment() {
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentAugmentedRealityBinding.inflate(inflater, container, false)
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner) {
-            FileLog.d("O_O", "Is on back happening? with state: ${viewModel.navState}")
             when (viewModel.navState) {
                 MainViewModel.NavState.NONE -> throw IllegalStateException("this navState should never be possible in ArFragment")
                 MainViewModel.NavState.CREATE_TO_AR_TO_TRY -> findNavController().navigate(AugmentedRealityFragmentDirections.actionArFragmentToCreateFragment())
@@ -151,10 +152,10 @@ class AugmentedRealityFragment : Fragment() {
         lifecycleScope.launchWhenCreated {
             loadModels()
         }
-        sceneView.camera.farClipPlane = RENDER_DISTANCE
-        //sceneView.arCameraStream.isDepthOcclusionEnabled = true //this needs to be called after placing is complete
 
         sceneView = binding.sceneView
+        sceneView.camera.farClipPlane = RENDER_DISTANCE
+        //sceneView.arCameraStream.isDepthOcclusionEnabled = true //this needs to be called after placing is complete
         sceneView.configureSession { _: ArSession, config: Config ->
             config.cloudAnchorMode = Config.CloudAnchorMode.ENABLED
             config.planeFindingMode = Config.PlaneFindingMode.HORIZONTAL //horizontal for now, potentially try out vertical for target later
@@ -166,10 +167,10 @@ class AugmentedRealityFragment : Fragment() {
         //sceneView.planeRenderer.isShadowReceiver = false
 
         sceneView.onArSessionCreated = {
-            FileLog.w("O_O", "Session is created: $it")
+            FileLog.w(TAG, "Session is created: $it")
         }
         sceneView.onArSessionFailed = {
-            FileLog.w("O_O", "Session failed with exception: $it")
+            FileLog.w(TAG, "Session failed with exception: $it")
 
         }
 
@@ -180,7 +181,6 @@ class AugmentedRealityFragment : Fragment() {
                 //Calculate distance between planes and resolved objects
                 if (placedNew) {
                     placedNew = false
-                    FileLog.d("O_O", "____")
                     nodeList.forEach {
                         //normalVector = it.worldToLocalPosition(normalVector.toVector3()).toFloat3()
                         val centerPos = it.worldToLocalPosition(plane.centerPose.position.toVector3()).toFloat3()
@@ -232,7 +232,8 @@ class AugmentedRealityFragment : Fragment() {
         binding.viewAccHorizontal4.visibility = if (cameraGeospatialPose.horizontalAccuracy > H_ACC_4) View.INVISIBLE else View.VISIBLE
 
         //update UI element for vertical accuracy
-        binding.viewAccVerticalRaw.text = String.format("%.2fm", cameraGeospatialPose.verticalAccuracy)
+        val altText = String.format("%.2fm", cameraGeospatialPose.verticalAccuracy) + String.format(" %.2fm", cameraGeospatialPose.altitude)
+        binding.viewAccVerticalRaw.text = altText
         binding.viewAccVertical0.visibility = if (cameraGeospatialPose.verticalAccuracy < V_ACC_0) View.INVISIBLE else View.VISIBLE
         binding.viewAccVertical1.visibility = if (cameraGeospatialPose.verticalAccuracy > V_ACC_1) View.INVISIBLE else View.VISIBLE
         binding.viewAccVertical2.visibility = if (cameraGeospatialPose.verticalAccuracy > V_ACC_2) View.INVISIBLE else View.VISIBLE
@@ -247,15 +248,19 @@ class AugmentedRealityFragment : Fragment() {
         binding.viewAccHeading3.visibility = if (cameraGeospatialPose.headingAccuracy > HEAD_ACC_3) View.INVISIBLE else View.VISIBLE
         binding.viewAccHeading4.visibility = if (cameraGeospatialPose.headingAccuracy > HEAD_ACC_4) View.INVISIBLE else View.VISIBLE
 
-        if (!earthAnchorPlaced) {
+        if (!earthAnchorPlaced && (viewModel.navState == MainViewModel.NavState.MAPS_TO_AR_NAV || viewModel.navState == MainViewModel.NavState.CREATE_TO_AR_TO_TRY)) {
             viewModel.currentPlace?.let {
-                if (cameraGeospatialPose.horizontalAccuracy < 2) {
-                    val earthAnchor = earth.createAnchor(it.lat, it.lng, it.alt ?: cameraGeospatialPose.altitude - 1, 0f, 0f, 0f, 1f)
+                if (cameraGeospatialPose.horizontalAccuracy < 2) { //TODO potentially change preview render, depending on accuracy and distance to it
+                    val earthAnchor = earth.createAnchor(it.lat, it.lng, it.alt ?: (cameraGeospatialPose.altitude - 1), 0f, 0f, 0f, 1f)
                     earthAnchorPlaced = true
-                    earthNode = ArNode(earthAnchor)
-                    earthNode?.let { earthNode ->
-                        earthNode.parent = sceneView
-                        earthNode.setModel(modelMap[ANCHOR_PREVIEW])
+                    earthNode = ArNode(earthAnchor).also { node ->
+                        node.setModel(modelMap[ANCHOR_PREVIEW])
+                        node.parent = sceneView
+                    }
+                    previewArrow = ArNode().also { arrow ->
+                        arrow.position = Position(0f, 2f, 0f)
+                        arrow.parent = earthNode
+                        arrow.setModel(modelMap[ANCHOR_PREVIEW_ARROW])
                     }
                 }
                 //FileLog.d("VPS", "Earth Node was placed at ${earthAnchor.pose.position}")
@@ -348,11 +353,19 @@ class AugmentedRealityFragment : Fragment() {
                                                     val latLng = GeoUtils.getPointByDistanceAndBearing(cameraGeospatialPose.latitude, cameraGeospatialPose.longitude, bearingToHit, distanceToHitInKm.toDouble())
 
                                                     val predictionAnchor = earth.createAnchor(latLng.latitude, latLng.longitude, cameraGeospatialPose.altitude - distanceOfCameraToGround, 0f, 0f, 0f, 1f)
-                                                    earthNode = ArNode(predictionAnchor)
-                                                    earthNode?.let {
-                                                        it.parent = sceneView
-                                                        it.setModel(modelMap[ANCHOR_PREVIEW])
+                                                    earthNode = ArNode(predictionAnchor).also { node ->
+                                                        node.parent = sceneView
+                                                        node.setModel(modelMap[ANCHOR_PREVIEW])
+
                                                     }
+                                                    //probably no arrow needed, when placing
+//                                                    previewArrow = ArNode().also { arrow ->
+//                                                        arrow.position = Position(0f, 2f, 0f)
+//                                                        arrow.parent = earthNode
+//                                                        arrow.setModel(modelMap[ANCHOR_PREVIEW_ARROW])
+//                                                    }
+
+
 
                                                     geoLat = latLng.latitude
                                                     geoLng = latLng.longitude
@@ -376,7 +389,7 @@ class AugmentedRealityFragment : Fragment() {
                                                         distanceToHit.toDouble()
                                                     )).also {
                                                         binding.arInfoText.text = it
-                                                        FileLog.d("O_O", it)
+                                                        FileLog.d(TAG, "Hit-Test location calculated: \n$it")
                                                     }
                                                 } else {
                                                     Utils.toast("Plane not detected and the trackable is $hitPlane")
@@ -387,6 +400,7 @@ class AugmentedRealityFragment : Fragment() {
                                                     it.hostCloudAnchorWithTtl(anchor, 365)
                                                     cloudAnchorManager.hostCloudAnchor(it, anchor, /* ttl= */ 365, object : CloudAnchorManager.CloudAnchorListener {
                                                         override fun onCloudTaskComplete(anchor: Anchor) {
+                                                            FileLog.d(TAG, "Hosting new cloud anchor with id: ${anchor.cloudAnchorId}")
                                                             onHostedAnchorAvailable(anchor)
                                                         }
                                                     })
@@ -610,9 +624,9 @@ class AugmentedRealityFragment : Fragment() {
                             it.heading = geoHdg
                             it.alt = geoAlt
                             findNavController().navigate(AugmentedRealityFragmentDirections.actionArFragmentToCreateFragment())
-                        } ?: FileLog.e("O_O", "Navstate is edit, but currentplace is null in ARFragment ")
+                        } ?: FileLog.e(TAG, "Navstate is edit, but currentplace is null in ARFragment ")
                     }
-                    else -> FileLog.e("O_O", "Wrong Navstate onClick Confirm is ${viewModel.navState}")
+                    else -> FileLog.e(TAG, "Wrong Navstate onClick Confirm is ${viewModel.navState}")
                 }
             } else {
                 Utils.toast("You need to place your destination target first.")
@@ -680,6 +694,10 @@ class AugmentedRealityFragment : Fragment() {
             .setSource(context, Uri.parse("models/anchor_preview.glb"))
             .setIsFilamentGltf(true)
             .await(lifecycle)
+        modelMap[ANCHOR_PREVIEW_ARROW] = ModelRenderable.builder()
+            .setSource(context, Uri.parse("models/preview_arrow_facing_down.glb"))
+            .setIsFilamentGltf(true)
+            .await(lifecycle)
         modelMap[TARGET] = ModelRenderable.builder()
             .setSource(context, Uri.parse("models/target.glb"))
             .setIsFilamentGltf(true)
@@ -716,6 +734,8 @@ class AugmentedRealityFragment : Fragment() {
         cloudAnchor = null
         earthNode?.parent = null
         earthNode = null
+        previewArrow?.parent = null
+        previewArrow = null
         binding.arFabLayout.visibility = View.GONE
         binding.arModelFrameS.visibility = View.GONE
         binding.arModelFrameM.visibility = View.GONE
@@ -741,7 +761,7 @@ class AugmentedRealityFragment : Fragment() {
             }
             AppState.PLACE_ANCHOR -> {
                 "Place the anchor, by tapping on a surface \n \n" +
-                        "Make sure this anchor is where it's placed on the map"
+                        "Make sure the VPS accuracy is good before placing!"
             }
             AppState.HOSTING -> {
                 "Anchor placed! \n \n" +

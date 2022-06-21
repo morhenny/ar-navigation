@@ -3,19 +3,29 @@ package de.morhenn.ar_navigation.persistance
 import de.morhenn.ar_navigation.util.FileLog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import java.net.ConnectException
 import java.net.SocketTimeoutException
 
 class PlaceRepository {
     private val webservice = Webservice.getInstance().create(Webservice::class.java)
     private val placeDao = AppDatabase.getInstance().placeDao()
 
+    // Int is the amount of times, it will try again after failure
+    private val newPlacesCache = HashMap<NewPlace, Int>()
+    private val updatedPlacesCache = HashMap<Place, Int>()
+    private val deletedPlacesCache = HashMap<Place, Int>()
+
+
     companion object {
         private lateinit var INSTANCE: PlaceRepository
+        private const val CONNECTION_RETRY_DELAY = 10000L
+        private const val CONNECTION_RETRY_MAX_ATTEMPTS = 5
 
         fun init() {
             if (!::INSTANCE.isInitialized) {
@@ -44,46 +54,94 @@ class PlaceRepository {
     }
 
     fun newPlace(place: NewPlace) {
+        if (newPlacesCache.containsKey(place)) {
+            val attemptsLeft = newPlacesCache[place]!!
+            if (attemptsLeft > 0) {
+                newPlacesCache[place] = attemptsLeft - 1
+            } else {
+                newPlacesCache.remove(place)
+                return
+            }
+        }
         val call = webservice.newPlace(place)
-        call.enqueue(object : Callback<Place> {
-            override fun onResponse(call: Call<Place>, response: Response<Place>) {
+        call.enqueue(object : Callback<Void> {
+            override fun onResponse(call: Call<Void>, response: Response<Void>) {
+                CoroutineScope(Dispatchers.IO).launch {
+                    refreshPlaces()
+                }
                 FileLog.d(Webservice.TAG, "onResponse after sending newPlace, is successfull= ${response.isSuccessful} \n ${response.toString()}")
             }
 
-            override fun onFailure(call: Call<Place>, t: Throwable) {
+            override fun onFailure(call: Call<Void>, t: Throwable) {
+                CoroutineScope(Dispatchers.Default).launch {
+                    delay(CONNECTION_RETRY_DELAY)
+                    newPlacesCache[place] = CONNECTION_RETRY_MAX_ATTEMPTS
+                    newPlace(place)
+                    FileLog.d(Webservice.TAG, "Called sending the new Place again after failure")
+                }
                 FileLog.d(Webservice.TAG, "onFailure after sending newPlace, Throwable= $t")
             }
         })
-        CoroutineScope(Dispatchers.IO).launch {
-            refreshPlaces()
-        }
     }
 
     fun updatePlace(place: Place) {
-        val call = webservice.updatePlace(place)
-        call.enqueue(object : Callback<Place> {
-            override fun onResponse(call: Call<Place>, response: Response<Place>) {
-                FileLog.d(Webservice.TAG, "onResponse after sending updatePlace, is successfull= ${response.isSuccessful} \n ${response.toString()}")
+        if (updatedPlacesCache.containsKey(place)) {
+            val attemptsLeft = updatedPlacesCache[place]!!
+            if (attemptsLeft > 0) {
+                updatedPlacesCache[place] = attemptsLeft - 1
+            } else {
+                updatedPlacesCache.remove(place)
+                return
             }
-
-            override fun onFailure(call: Call<Place>, t: Throwable) {
-                FileLog.d(Webservice.TAG, "onFailure after sending updatePlace, Throwable= $t")
-            }
-        })
-        CoroutineScope(Dispatchers.IO).launch {
-            refreshPlaces()
         }
-    }
-
-    fun deletePlace(place: Place) {
-        val call = webservice.deletePlace(place)
+        val call = webservice.updatePlace(place)
         call.enqueue(object : Callback<Void> {
             override fun onResponse(call: Call<Void>, response: Response<Void>) {
+                CoroutineScope(Dispatchers.IO).launch {
+                    refreshPlaces()
+                }
                 FileLog.d(Webservice.TAG, "onResponse after sending updatePlace, is successfull= ${response.isSuccessful} \n ${response.toString()}")
             }
 
             override fun onFailure(call: Call<Void>, t: Throwable) {
+                CoroutineScope(Dispatchers.Default).launch {
+                    delay(CONNECTION_RETRY_DELAY)
+                    updatedPlacesCache[place] = CONNECTION_RETRY_MAX_ATTEMPTS
+                    updatePlace(place)
+                    FileLog.d(Webservice.TAG, "Called sending the updated Place again after failure")
+                }
                 FileLog.d(Webservice.TAG, "onFailure after sending updatePlace, Throwable= $t")
+            }
+        })
+    }
+
+    fun deletePlace(place: Place) {
+        if (deletedPlacesCache.containsKey(place)) {
+            val attemptsLeft = deletedPlacesCache[place]!!
+            if (attemptsLeft > 0) {
+                deletedPlacesCache[place] = attemptsLeft - 1
+            } else {
+                deletedPlacesCache.remove(place)
+                return
+            }
+        }
+        val call = webservice.deletePlace(place)
+        call.enqueue(object : Callback<Void> {
+            override fun onResponse(call: Call<Void>, response: Response<Void>) {
+                CoroutineScope(Dispatchers.IO).launch {
+                    refreshPlaces()
+                }
+                FileLog.d(Webservice.TAG, "onResponse after deleting Place, is successfull= ${response.isSuccessful} \n ${response.toString()}")
+            }
+
+            override fun onFailure(call: Call<Void>, t: Throwable) {
+                CoroutineScope(Dispatchers.Default).launch {
+                    delay(CONNECTION_RETRY_DELAY)
+                    deletedPlacesCache[place] = CONNECTION_RETRY_MAX_ATTEMPTS
+                    deletePlace(place)
+                    FileLog.d(Webservice.TAG, "Called sending the deleted Place again after failure")
+                }
+                FileLog.d(Webservice.TAG, "onFailure after deleting Place, Throwable= $t")
             }
         })
     }
@@ -99,7 +157,9 @@ class PlaceRepository {
                 }
             }
         } catch (e: SocketTimeoutException) {
-            FileLog.e("WebService", "Could not connect to webserver")
+            FileLog.e("WebService", "Could not connect to webserver with $e")
+        } catch (e: ConnectException) {
+            FileLog.e("WebService", "Connection to webserver failed with $e")
         }
     }
 }

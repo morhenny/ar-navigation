@@ -1,5 +1,6 @@
 package de.morhenn.ar_navigation.persistance
 
+import com.google.gson.GsonBuilder
 import retrofit2.Call
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -15,9 +16,10 @@ interface Webservice {
         fun init() {
             if (!::INSTANCE.isInitialized) {
                 synchronized(Webservice::class) {
+                    val gson = GsonBuilder().setLenient().create()
                     INSTANCE = Retrofit.Builder()
                         .baseUrl("http://192.168.178.74:8080/")
-                        .addConverterFactory(GsonConverterFactory.create())
+                        .addConverterFactory(GsonConverterFactory.create(gson))
                         .build()
                 }
             } else {
@@ -39,11 +41,11 @@ interface Webservice {
 
     @POST("places")
     @Headers("Content-Type: application/json")
-    fun newPlace(@Body place: NewPlace): Call<Place>
+    fun newPlace(@Body place: NewPlace): Call<Void>
 
     @POST("places")
     @Headers("Content-Type: application/json")
-    fun updatePlace(@Body place: Place): Call<Place>
+    fun updatePlace(@Body place: Place): Call<Void>
 
     @HTTP(method = "DELETE", path = "places", hasBody = true)
     @Headers("Content-Type: application/json")

@@ -37,7 +37,7 @@ import de.morhenn.ar_navigation.util.Utils
 
 class MapsFragment : Fragment(), OnMapReadyCallback, SensorEventListener {
 
-    private val MAX_DISTANCE_TO_START = 150 //Distance in m between marker location and GPS position, to be able to start AR-Navigation
+    private val MAX_DISTANCE_TO_START = 500 //Distance in m between marker location and GPS position, to be able to start AR-Navigation
 
 
     //best practise for using binding
@@ -115,7 +115,8 @@ class MapsFragment : Fragment(), OnMapReadyCallback, SensorEventListener {
         routeFab = binding.mapRouteFab
         routeFab.setOnClickListener {
             viewModel.updateCurrentPlace(selectedMarker!!)
-            onRouteClick(view)
+            viewModel.navState = MainViewModel.NavState.MAPS_TO_AR_NAV
+            findNavController().navigate(MapsFragmentDirections.actionMapsFragmentToArFragment())
         }
         myLocationFab = binding.mapMyLocationFab
         myLocationFab.setImageResource(R.drawable.ic_baseline_gps_not_fixed_24)
@@ -176,8 +177,9 @@ class MapsFragment : Fragment(), OnMapReadyCallback, SensorEventListener {
             true
         }
         map.setOnInfoWindowClickListener { marker ->
-            viewModel.updateCurrentPlace(marker)
-            onRouteClick(requireView())
+            viewModel.updateCurrentPlace(selectedMarker!!)
+            viewModel.navState = MainViewModel.NavState.MAPS_TO_AR_NAV
+            findNavController().navigate(MapsFragmentDirections.actionMapsFragmentToArFragment())
         }
         map.setOnInfoWindowLongClickListener { marker ->
             viewModel.updateCurrentPlace(marker)
