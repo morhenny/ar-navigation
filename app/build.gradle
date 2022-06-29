@@ -81,7 +81,9 @@ dependencies {
     implementation "androidx.lifecycle:lifecycle-livedata-ktx:2.3.1"
 
     // AR
-    implementation 'io.github.sceneview:arsceneview:0.6.0'
+    implementation 'io.github.sceneview:arsceneview:0.7.0'
+    //temporary until sceneview is on current version of ArCore again
+    implementation 'com.google.ar:core:1.32.0'
 
     // ExpandableFab
     implementation 'com.nambimobile.widgets:expandable-fab:1.2.1'

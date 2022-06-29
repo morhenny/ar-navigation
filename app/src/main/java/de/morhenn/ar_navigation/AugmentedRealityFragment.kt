@@ -308,7 +308,7 @@ class AugmentedRealityFragment : Fragment() {
     }
 
     private fun initOnTouch() {
-        sceneView.onTouchAr = { hitResult, motionEvent ->
+        sceneView.onTapAr = { hitResult, motionEvent ->
             if (appState == AppState.HOST_FAIL) {
                 appState = AppState.PLACE_ANCHOR
             }
@@ -356,7 +356,6 @@ class AugmentedRealityFragment : Fragment() {
                                                     earthNode = ArNode(predictionAnchor).also { node ->
                                                         node.parent = sceneView
                                                         node.setModel(modelMap[ANCHOR_PREVIEW])
-
                                                     }
                                                     //probably no arrow needed, when placing
 //                                                    previewArrow = ArNode().also { arrow ->
@@ -364,7 +363,6 @@ class AugmentedRealityFragment : Fragment() {
 //                                                        arrow.parent = earthNode
 //                                                        arrow.setModel(modelMap[ANCHOR_PREVIEW_ARROW])
 //                                                    }
-
 
 
                                                     geoLat = latLng.latitude
