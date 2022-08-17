@@ -30,11 +30,14 @@
         <entry key="..\:/dev/AndroidStudioProjects/ARNavigation/app/src/main/res/layout/fragment_create.xml" value="0.2563405797101449" />
         <entry key="..\:/dev/AndroidStudioProjects/ARNavigation/app/src/main/res/layout/fragment_maps.xml" value="0.297554347826087" />
         <entry key="..\:/dev/AndroidStudioProjects/ARNavigation/app/src/main/res/layout/item_ar_nodes_list.xml" value="0.2630208333333333" />
+        <entry key="..\:/dev/AndroidStudioProjects/ar-navigation/app/src/main/res/drawable/ic_baseline_add_location_alt_24.xml" value="0.274" />
         <entry key="..\:/dev/AndroidStudioProjects/ar-navigation/app/src/main/res/drawable/ic_baseline_photo_size_select_large_24.xml" value="0.26" />
         <entry key="..\:/dev/AndroidStudioProjects/ar-navigation/app/src/main/res/drawable/rounded_corners.xml" value="0.26" />
+        <entry key="..\:/dev/AndroidStudioProjects/ar-navigation/app/src/main/res/layout/ar_place_info.xml" value="0.19791666666666666" />
         <entry key="..\:/dev/AndroidStudioProjects/ar-navigation/app/src/main/res/layout/fragment_augmented_reality.xml" value="0.2546875" />
         <entry key="..\:/dev/AndroidStudioProjects/ar-navigation/app/src/main/res/layout/fragment_create.xml" value="0.22395833333333334" />
         <entry key="..\:/dev/AndroidStudioProjects/ar-navigation/app/src/main/res/layout/fragment_maps.xml" value="0.24947916666666667" />
+        <entry key="..\:/dev/AndroidStudioProjects/ar-navigation/app/src/main/res/layout/info_window.xml" value="0.22395833333333334" />
         <entry key="..\:/dev/AndroidStudioProjects/ar-navigation/app/src/main/res/layout/vps_accuracy.xml" value="0.2546875" />
       </map>
     </option>

@@ -16,7 +16,7 @@ interface PlaceDao {
     @Query("Select * from place where id is (:id)")
     fun getPlaceById(id: String): Place
 
-    @Query("Select * from place where lat > (:latSmall) and lat < (:latHigh) and lng > (:lngSmall) and lng < (:lngHigh)")
+    @Query("Select * from place where lat > :latSmall and lat < :latHigh and lng > :lngSmall and lng < :lngHigh")
     fun getPlaceListForCoordRange(latSmall: Double, latHigh: Double, lngSmall: Double, lngHigh: Double): Flow<List<Place>>
 
     @Insert(onConflict = REPLACE)

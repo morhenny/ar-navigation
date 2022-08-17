@@ -24,4 +24,17 @@ object GeoUtils {
 
         return LatLng(latNew, lonNew)
     }
+
+    fun distanceBetweenTwoCoordinates(latlng1: LatLng, latlng2: LatLng): Double {
+        val earthRadius = 6378.1
+        val lat1 = Math.toRadians(latlng1.latitude)
+        val lon1 = Math.toRadians(latlng1.longitude)
+        val lat2 = Math.toRadians(latlng2.latitude)
+        val lon2 = Math.toRadians(latlng2.longitude)
+        val dLat = lat2 - lat1
+        val dLon = lon2 - lon1
+        val a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) * Math.sin(dLon / 2)
+        val c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+        return earthRadius * c * 1000
+    }
 }

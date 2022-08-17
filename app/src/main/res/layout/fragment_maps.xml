@@ -37,6 +37,17 @@
             map:borderWidth="0dp" />
 
         <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/map_ar_search_fab"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:backgroundTint="@color/white"
+            android:contentDescription="FAB to preview anchors in AR"
+            android:elevation="0dp"
+            android:src="@drawable/ic_baseline_view_in_ar_24"
+            map:borderWidth="0dp" />
+
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
             android:id="@+id/map_add_fab"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

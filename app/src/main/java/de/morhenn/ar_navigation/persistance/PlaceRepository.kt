@@ -11,6 +11,7 @@ import retrofit2.Callback
 import retrofit2.Response
 import java.net.ConnectException
 import java.net.SocketTimeoutException
+import kotlin.math.cos
 
 class PlaceRepository {
     private val webservice = Webservice.getInstance().create(Webservice::class.java)
@@ -51,6 +52,30 @@ class PlaceRepository {
             refreshPlaces()
         }
         return placeDao.getPlaceList()
+    }
+
+
+
+    //getPlaces that are around the given position in a radius of @radius meters
+    fun getPlacesAroundLocation(latitude: Double, longitude: Double, radius: Double): Flow<List<Place>> {
+        CoroutineScope(Dispatchers.IO).launch {
+            refreshPlaces()
+        }
+        // 1° lat = 111.32 km
+        // 1° long = 40075 km * cos( latitude ) / 360
+        val latPerM = 1 / (111.32 * 1000)
+        val longPerM = 1 / ((40075.0 * cos(latitude)/ 360) * 1000)
+        val latDeltaInDegrees = radius * latPerM
+        var longDeltaInDegrees = radius * longPerM
+
+        val minLat = latitude - latDeltaInDegrees
+        val maxLat = latitude + latDeltaInDegrees
+
+        if(longDeltaInDegrees<0) longDeltaInDegrees*=-1
+
+        val minLon = longitude - longDeltaInDegrees
+        val maxLon = longitude + longDeltaInDegrees
+        return placeDao.getPlaceListForCoordRange(minLat, maxLat, minLon, maxLon)
     }
 
     fun newPlace(place: NewPlace) {

@@ -4,6 +4,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.asLiveData
+import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.Marker
 import de.morhenn.ar_navigation.persistance.AppDatabase
 import de.morhenn.ar_navigation.persistance.NewPlace
@@ -18,6 +19,7 @@ class MainViewModel : ViewModel() {
         CREATE_TO_AR_TO_TRY,
         MAPS_TO_AR_NEW,
         MAPS_TO_AR_NAV,
+        MAPS_TO_AR_SEARCH,
         MAPS_TO_EDIT,
 
     }
@@ -42,6 +44,8 @@ class MainViewModel : ViewModel() {
 
     val places = placeRepository.getPlaces().asLiveData()
     val placesMap = HashMap<Marker, Place>()
+
+    var placesInRadius = placeRepository.getPlacesAroundLocation(0.0, 0.0, 1.0).asLiveData()
 
     fun onClickMarker(marker: Marker) {
         placesMap[marker]?.let {
@@ -80,6 +84,10 @@ class MainViewModel : ViewModel() {
         geoAlt = 0.0
         geoLat = 0.0
         geoLng = 0.0
+    }
+
+    fun fetchPlacesAroundLocation(latLng: LatLng, searchRadius: Double) {
+        placesInRadius = placeRepository.getPlacesAroundLocation(latLng.latitude, latLng.longitude, searchRadius).asLiveData()
     }
 
 }

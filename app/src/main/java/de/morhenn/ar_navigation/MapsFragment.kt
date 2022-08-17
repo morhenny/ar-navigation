@@ -46,6 +46,7 @@ class MapsFragment : Fragment(), OnMapReadyCallback, SensorEventListener {
 
     private lateinit var infoWindowAdapter: MyInfoWindowAdapter
     private lateinit var routeFab: FloatingActionButton
+    private lateinit var searchInArFab: FloatingActionButton
     private lateinit var myLocationFab: FloatingActionButton
     private lateinit var createFab: FloatingActionButton
     private var selectedMarker: Marker? = null
@@ -118,6 +119,12 @@ class MapsFragment : Fragment(), OnMapReadyCallback, SensorEventListener {
             viewModel.navState = MainViewModel.NavState.MAPS_TO_AR_NAV
             findNavController().navigate(MapsFragmentDirections.actionMapsFragmentToArFragment())
         }
+        searchInArFab = binding.mapArSearchFab
+        searchInArFab.setOnClickListener {
+            // viewModel.updateCurrentPlace(selectedMarker!!) potentially highlight marker in AR
+            viewModel.navState = MainViewModel.NavState.MAPS_TO_AR_SEARCH
+            findNavController().navigate(MapsFragmentDirections.actionMapsFragmentToArFragment())
+        }
         myLocationFab = binding.mapMyLocationFab
         myLocationFab.setImageResource(R.drawable.ic_baseline_gps_not_fixed_24)
         myLocationFab.setOnClickListener { zoomOnMyLocation() }
@@ -156,6 +163,7 @@ class MapsFragment : Fragment(), OnMapReadyCallback, SensorEventListener {
         map.uiSettings.isMyLocationButtonEnabled = false
         map.uiSettings.isCompassEnabled = true
         map.isMyLocationEnabled = true
+        map.mapType = GoogleMap.MAP_TYPE_NORMAL
         map.setOnCameraMoveStartedListener {
             if (centered) {
                 centered = false
