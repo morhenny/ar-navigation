@@ -1,6 +1,5 @@
 package de.morhenn.ar_navigation
 
-import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -17,8 +16,6 @@ import com.google.ar.core.Anchor.CloudAnchorState
 import com.google.ar.core.exceptions.FatalException
 import com.google.ar.sceneform.math.Quaternion
 import com.google.ar.sceneform.math.Vector3
-import com.google.ar.sceneform.rendering.ModelRenderable
-import com.google.ar.sceneform.rendering.Renderable
 import com.google.ar.sceneform.rendering.ViewRenderable
 import de.morhenn.ar_navigation.AugmentedRealityFragment.ModelName.*
 import de.morhenn.ar_navigation.databinding.FragmentAugmentedRealityBinding
@@ -35,7 +32,8 @@ import io.github.sceneview.ar.arcore.*
 import io.github.sceneview.ar.node.ArNode
 import io.github.sceneview.ar.scene.PlaneRenderer
 import io.github.sceneview.math.*
-import io.github.sceneview.model.await
+import io.github.sceneview.model.GLBLoader
+import io.github.sceneview.model.Model
 import io.github.sceneview.node.ViewNode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -111,7 +109,7 @@ class AugmentedRealityFragment : Fragment() {
     private var pointList: MutableList<ArPoint> = ArrayList()
     private val adapter = MyListAdapter(pointList)
 
-    private var modelMap: EnumMap<ModelName, Renderable> = EnumMap(ModelName::class.java)
+    private var modelMap: EnumMap<ModelName, Model> = EnumMap(ModelName::class.java)
     private var cloudAnchor: Anchor? = null
     private var cloudAnchorId: String? = ""
     private var arRoute: ArRoute? = null
@@ -284,7 +282,7 @@ class AugmentedRealityFragment : Fragment() {
         } else if (!earthAnchorPlaced && (viewModel.navState == MainViewModel.NavState.MAPS_TO_AR_NAV || viewModel.navState == MainViewModel.NavState.CREATE_TO_AR_TO_TRY)) {
             viewModel.currentPlace?.let {
                 if (cameraGeospatialPose.horizontalAccuracy < 2) { //TODO potentially change preview render, depending on accuracy and distance to it
-                    val earthAnchor = earth.createAnchor(it.lat, it.lng, it.alt ?: (cameraGeospatialPose.altitude - 1), 0f, 0f, 0f, 1f)
+                    val earthAnchor = earth.createAnchor(it.lat, it.lng, it.alt, 0f, 0f, 0f, 1f)
                     earthAnchorPlaced = true
                     earthNode = ArNode(earthAnchor).also { node ->
                         node.setModel(modelMap[ANCHOR_PREVIEW])
@@ -802,49 +800,19 @@ class AugmentedRealityFragment : Fragment() {
     }
 
     private suspend fun loadModels() {
-        modelMap[ARROW_FORWARD] = ModelRenderable.builder()
-            .setSource(context, Uri.parse("models/arrow_fw.glb"))
-            .setIsFilamentGltf(true)
-            .await(lifecycle)
-        modelMap[ARROW_LEFT] = ModelRenderable.builder()
-            .setSource(context, Uri.parse("models/arrow_lf.glb"))
-            .setIsFilamentGltf(true)
-            .await(lifecycle)
-        modelMap[ARROW_RIGHT] = ModelRenderable.builder()
-            .setSource(context, Uri.parse("models/arrow_rd.glb"))
-            .setIsFilamentGltf(true)
-            .await(lifecycle)
-        modelMap[CUBE] = ModelRenderable.builder()
-            .setSource(context, Uri.parse("models/cube.glb"))
-            .setIsFilamentGltf(true)
-            .await(lifecycle)
-        modelMap[ANCHOR] = ModelRenderable.builder()
-            .setSource(context, Uri.parse("models/anchor.glb"))
-            .setIsFilamentGltf(true)
-            .await(lifecycle)
-        modelMap[ANCHOR_PREVIEW] = ModelRenderable.builder()
-            .setSource(context, Uri.parse("models/anchor_preview.glb"))
-            .setIsFilamentGltf(true)
-            .await(lifecycle)
-        modelMap[ANCHOR_PREVIEW_ARROW] = ModelRenderable.builder()
-            .setSource(context, Uri.parse("models/preview_arrow_facing_down.glb"))
-            .setIsFilamentGltf(true)
-            .await(lifecycle)
-        modelMap[TARGET] = ModelRenderable.builder()
-            .setSource(context, Uri.parse("models/target.glb"))
-            .setIsFilamentGltf(true)
-            .await(lifecycle)
-        modelMap[AXIS] = ModelRenderable.builder()
-            .setSource(context, Uri.parse("models/axis.glb"))
-            .setIsFilamentGltf(true)
-            .await(lifecycle)
-        modelMap[ANCHOR_SEARCH_ARROW] = ModelRenderable.builder()
-            .setSource(context, Uri.parse("models/small_preview_arrow_blue.glb"))
-            .setIsFilamentGltf(true)
-            .await(lifecycle)
+        modelMap[ARROW_FORWARD] = GLBLoader.loadModel(requireContext(), lifecycle, "models/arrow_fw.glb")
+        modelMap[ARROW_LEFT] = GLBLoader.loadModel(requireContext(), lifecycle, "models/arrow_lf.glb")
+        modelMap[ARROW_RIGHT] = GLBLoader.loadModel(requireContext(), lifecycle, "models/arrow_rd.glb")
+        modelMap[CUBE] = GLBLoader.loadModel(requireContext(), lifecycle, "models/cube.glb")
+        modelMap[ANCHOR] = GLBLoader.loadModel(requireContext(), lifecycle, "models/anchor.glb")
+        modelMap[ANCHOR_PREVIEW] = GLBLoader.loadModel(requireContext(), lifecycle, "models/anchor_preview.glb")
+        modelMap[ANCHOR_PREVIEW_ARROW] = GLBLoader.loadModel(requireContext(), lifecycle, "models/preview_arrow_facing_down.glb")
+        modelMap[TARGET] = GLBLoader.loadModel(requireContext(), lifecycle, "models/target.glb")
+        modelMap[AXIS] = GLBLoader.loadModel(requireContext(), lifecycle, "models/axis.glb")
+        modelMap[ANCHOR_SEARCH_ARROW] = GLBLoader.loadModel(requireContext(), lifecycle, "models/small_preview_arrow_blue.glb")
     }
 
-    private fun findModelName(model: Renderable?): ModelName {
+    private fun findModelName(model: Model?): ModelName {
         model?.let {
             modelMap.keys.forEach {
                 if (model == modelMap[it]) {
