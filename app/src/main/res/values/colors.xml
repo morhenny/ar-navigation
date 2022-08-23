@@ -12,5 +12,13 @@
     <color name="acc_2">#AAD7A700</color>
     <color name="acc_3">#AAA0D600</color>
     <color name="acc_4">#AA00FF00</color>
+    <color name="primary">#90a4ae</color>
+    <color name="primaryLight">#c1d5e0</color>
+    <color name="primaryDark">#62757f</color>
+    <color name="secondary">#303f9f</color>
+    <color name="secondaryLight">#666ad1</color>
+    <color name="secondaryDark">#001970</color>
+    <color name="transparent">#00000000</color>
+
 
 </resources>

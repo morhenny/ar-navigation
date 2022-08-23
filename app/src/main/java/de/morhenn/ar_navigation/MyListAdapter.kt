@@ -28,26 +28,21 @@ class MyListAdapter(private val list: List<ArPoint>) : RecyclerView.Adapter<MyLi
             when (node.modelName) {
                 AugmentedRealityFragment.ModelName.ARROW_LEFT -> {
                     binding.nodeListItemIcon.setImageResource(R.drawable.ic_baseline_arrow_back_24)
-                    binding.nodeListItemText.text = "ARROW LEFT"
                 }
                 AugmentedRealityFragment.ModelName.ARROW_FORWARD -> {
                     binding.nodeListItemIcon.setImageResource(R.drawable.ic_baseline_arrow_upward_24)
-                    binding.nodeListItemText.text = "ARROW FORWARD"
                 }
                 AugmentedRealityFragment.ModelName.ARROW_RIGHT -> {
                     binding.nodeListItemIcon.setImageResource(R.drawable.ic_baseline_arrow_forward_24)
-                    binding.nodeListItemText.text = "ARROW RIGHT"
                 }
                 AugmentedRealityFragment.ModelName.TARGET -> {
                     binding.nodeListItemIcon.setImageResource(R.drawable.ic_baseline_emoji_flags_24)
-                    binding.nodeListItemText.text = "DESTINATION"
                 }
                 else -> {
                     binding.nodeListItemIcon.setImageResource(R.drawable.ic_baseline_error_outline_24)
-                    binding.nodeListItemText.text = "No Model found"
                 }
             }
-            binding.nodeListItem.setOnClickListener {
+            binding.nodeListItemIcon.setOnClickListener {
                 Utils.toast("Node #$position was clicked")
             }
         }

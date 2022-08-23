@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
 
     android:id="@+id/arFragment"
     android:layout_width="match_parent"
@@ -86,9 +87,9 @@
                 android:id="@+id/view_acc_vertical_raw"
                 android:layout_width="48dp"
                 android:layout_height="24dp"
-                android:textSize="11sp"
                 android:layout_marginHorizontal="1dp"
-                android:gravity="center" />
+                android:gravity="center"
+                android:textSize="11sp" />
 
             <View
                 android:id="@+id/view_acc_vertical_0"
@@ -197,131 +198,137 @@
         android:layout_height="match_parent"
         android:elevation="1dp" />
 
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/ar_node_list"
+        android:layout_width="50dp"
+        android:layout_height="0dp"
+        android:elevation="2dp"
+        android:paddingHorizontal="4dp"
+        android:paddingVertical="8dp"
+        app:layout_constraintBottom_toTopOf="@id/ar_content_layout"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/ar_info_text" />
+
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/ar_content_layout"
         android:layout_width="0dp"
-        android:layout_height="140dp"
-        android:layout_margin="12dp"
+        android:layout_height="wrap_content"
+        android:layout_margin="4dp"
         android:background="@drawable/rounded_corners"
+        android:backgroundTint="@color/translucent"
         android:elevation="2dp"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintLeft_toLeftOf="parent">
-
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/ar_node_list"
-            android:layout_width="150dp"
-            android:layout_height="match_parent"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintLeft_toLeftOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
-
-        <LinearLayout
-            android:layout_width="50dp"
-            android:layout_height="match_parent"
-            android:orientation="vertical"
-            app:layout_constraintLeft_toRightOf="@id/ar_node_list"
-            app:layout_constraintRight_toLeftOf="@id/ar_button_layout"
-            app:layout_constraintTop_toTopOf="parent">
-
-            <FrameLayout
-                android:id="@+id/ar_model_frame_s"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:layout_margin="4dp"
-                android:background="@drawable/rounded_corners"
-                android:visibility="gone">
-
-                <ImageView
-                    android:id="@+id/ar_model_icon_s"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:padding="6dp"
-                    android:src="@drawable/ic_baseline_photo_size_select_large_24"
-                    android:visibility="visible" />
-            </FrameLayout>
-
-            <FrameLayout
-                android:id="@+id/ar_model_frame_m"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:layout_margin="4dp"
-                android:background="@drawable/rounded_corners_highlighted"
-                android:visibility="gone">
-
-                <ImageView
-                    android:id="@+id/ar_model_icon_m"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:padding="4dp"
-                    android:src="@drawable/ic_baseline_photo_size_select_large_24" />
-            </FrameLayout>
-
-            <FrameLayout
-                android:id="@+id/ar_model_frame_l"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:layout_margin="4dp"
-                android:background="@drawable/rounded_corners"
-                android:visibility="gone">
-
-                <ImageView
-                    android:id="@+id/ar_model_icon_l"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:padding="0dp"
-                    android:src="@drawable/ic_baseline_photo_size_select_large_24" />
-            </FrameLayout>
-        </LinearLayout>
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent">
 
         <LinearLayout
             android:id="@+id/ar_button_layout"
             android:layout_width="wrap_content"
-            android:layout_height="match_parent"
+            android:layout_height="wrap_content"
             android:orientation="vertical"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintRight_toRightOf="parent">
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
 
-            <Button
-                android:id="@+id/ar_button_resolve"
-                android:layout_width="match_parent"
-                android:layout_height="40dp"
-                android:text="RESOLVE" />
 
-            <Button
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/ar_button_undo"
                 android:layout_width="match_parent"
-                android:layout_height="40dp"
-                android:enabled="false"
-                android:text="UNDO" />
+                android:layout_height="wrap_content"
+                android:text="UNDO"
+                android:textColor="@color/white"
+                android:textSize="11sp"
+                app:icon="@drawable/ic_baseline_undo_24"
+                app:iconTint="@color/white" />
 
-            <Button
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/ar_button_clear"
-                android:layout_width="match_parent"
-                android:layout_height="40dp"
-                android:text="CLEAR" />
-
-            <Button
-                android:id="@+id/ar_button_confirm"
-                android:layout_width="match_parent"
-                android:layout_height="40dp"
-                android:text="CONFIRM" />
-
-            <Button
-                android:id="@+id/ar_button_done"
-                android:layout_width="match_parent"
-                android:layout_height="40dp"
-                android:text="DONE" />
-
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="CLEAR"
+                android:textColor="@color/white"
+                android:textSize="11sp"
+                app:icon="@drawable/ic_baseline_delete_24"
+                app:iconTint="@color/white" />
         </LinearLayout>
 
+
+        <com.google.android.material.button.MaterialButtonToggleGroup
+            android:id="@+id/ar_model_size_toggle"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:divider="@color/primaryLight"
+            android:orientation="vertical"
+            android:padding="4dp"
+            android:layout_marginStart="8dp"
+            android:visibility="invisible"
+            app:checkedButton="@id/ar_model_icon_m"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintLeft_toRightOf="@id/ar_extended_fab"
+            app:layout_constraintTop_toTopOf="parent"
+            app:selectionRequired="true"
+            app:singleSelection="true">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/ar_model_icon_s"
+                style="@style/Widget.App.Button.OutlinedButton.IconOnly"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:padding="10dp"
+                app:icon="@drawable/ic_baseline_photo_size_select_large_24"
+                app:iconSize="16dp"
+                app:iconTint="@color/white" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/ar_model_icon_m"
+                style="@style/Widget.App.Button.OutlinedButton.IconOnly"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:padding="8dp"
+                app:icon="@drawable/ic_baseline_photo_size_select_large_24"
+                app:iconSize="20dp"
+                app:iconTint="@color/white" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/ar_model_icon_l"
+                style="@style/Widget.App.Button.OutlinedButton.IconOnly"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:padding="6dp"
+                app:icon="@drawable/ic_baseline_photo_size_select_large_24"
+                app:iconSize="24dp"
+                app:iconTint="@color/white" />
+
+        </com.google.android.material.button.MaterialButtonToggleGroup>
+
+
+        <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
+            android:id="@+id/ar_extended_fab"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_margin="10dp"
+            android:padding="12dp"
+            android:text="@string/button_resolve"
+            android:enabled="false"
+            android:textColor="@color/white"
+            app:icon="@drawable/ic_baseline_cloud_download_24"
+            app:iconTint="@color/white"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintRight_toRightOf="parent"
+            tools:backgroundTint="@color/secondary" />
+
     </androidx.constraintlayout.widget.ConstraintLayout>
+
 
     <com.nambimobile.widgets.efab.ExpandableFabLayout
         android:id="@+id/ar_fab_layout"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:elevation="6dp"
-        android:visibility="gone">
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintRight_toRightOf="parent">
 
         <com.nambimobile.widgets.efab.Overlay
             android:layout_width="match_parent"
@@ -333,12 +340,14 @@
             android:layout_height="wrap_content"
             android:layout_gravity="bottom|end"
             android:layout_margin="12dp"
+            app:efab_color="@color/secondary"
             app:efab_icon="@drawable/ic_baseline_add_24" />
 
         <com.nambimobile.widgets.efab.FabOption
             android:id="@+id/ar_fab_arrow_forward"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            app:efab_color="@color/secondaryLight"
             app:fab_icon="@drawable/ic_baseline_arrow_upward_24"
             app:fab_openingAnimationDurationMs="0"
             app:label_hiddenToVisibleAnimationDurationMs="50"
@@ -348,6 +357,7 @@
             android:id="@+id/ar_fab_arrow_right"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            app:efab_color="@color/secondaryLight"
             app:fab_icon="@drawable/ic_baseline_arrow_forward_24"
             app:fab_openingAnimationDurationMs="0"
             app:label_hiddenToVisibleAnimationDurationMs="50"
@@ -357,6 +367,7 @@
             android:id="@+id/ar_fab_arrow_left"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            app:efab_color="@color/secondaryLight"
             app:fab_icon="@drawable/ic_baseline_arrow_back_24"
             app:fab_openingAnimationDurationMs="00"
             app:label_hiddenToVisibleAnimationDurationMs="50"
@@ -366,6 +377,7 @@
             android:id="@+id/ar_fab_target"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            app:efab_color="@color/secondaryLight"
             app:fab_icon="@drawable/ic_baseline_emoji_flags_24"
             app:fab_openingAnimationDurationMs="00"
             app:label_hiddenToVisibleAnimationDurationMs="50"

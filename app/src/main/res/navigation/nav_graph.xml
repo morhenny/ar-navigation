@@ -10,24 +10,18 @@
         <action
             android:id="@+id/action_mapsFragment_to_arFragment"
             app:destination="@id/arFragment"
-            app:popUpTo="@id/arFragment" />
+/>
         <action
             android:id="@+id/action_mapsFragment_to_createFragment"
-            app:destination="@id/createFragment"
-            app:popUpTo="@id/createFragment" />
+            app:destination="@id/createFragment" />
     </fragment>
     <fragment
         android:id="@+id/arFragment"
         android:name="de.morhenn.ar_navigation.AugmentedRealityFragment"
         android:label="ArFragment">
         <action
-            android:id="@+id/action_arFragment_to_mapsFragment"
-            app:destination="@id/mapsFragment"
-            app:popUpTo="@id/mapsFragment" />
-        <action
             android:id="@+id/action_arFragment_to_createFragment"
-            app:destination="@id/createFragment"
-            app:popUpTo="@id/createFragment" />
+            app:destination="@id/createFragment" />
     </fragment>
     <fragment
         android:id="@+id/createFragment"
@@ -36,10 +30,9 @@
         <action
             android:id="@+id/action_createFragment_to_mapsFragment"
             app:destination="@id/mapsFragment"
-            app:popUpTo="@id/mapsFragment" />
+            app:popUpTo="@id/arFragment" />
         <action
             android:id="@+id/action_createFragment_to_arFragment"
-            app:destination="@id/arFragment"
-            app:popUpTo="@id/arFragment" />
+            app:destination="@id/arFragment"/>
     </fragment>
 </navigation>

@@ -1,6 +1,7 @@
 package de.morhenn.ar_navigation
 
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -35,10 +36,7 @@ import io.github.sceneview.math.*
 import io.github.sceneview.model.GLBLoader
 import io.github.sceneview.model.Model
 import io.github.sceneview.node.ViewNode
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -84,6 +82,7 @@ class AugmentedRealityFragment : Fragment() {
         RESOLVING,
         RESOLVE_SUCCESS,
         RESOLVE_FAIL, //difficult to be sure - most likely after some timeout
+        SEARCHING,
     }
 
     enum class ModelName {
@@ -128,10 +127,10 @@ class AugmentedRealityFragment : Fragment() {
     private val placesInRadiusEarthAnchors = ArrayList<Anchor>()
     private val placesInRadiusInfoNodes = ArrayList<ViewNode>()
 
-    var geoLat = 0.0
-    var geoLng = 0.0
-    var geoAlt = 0.0
-    var geoHdg = 0.0
+    private var geoLat = 0.0
+    private var geoLng = 0.0
+    private var geoAlt = 0.0
+    private var geoHdg = 0.0
 
     private var earthAnchorPlaced = false
     private var earth: Earth? = null
@@ -145,25 +144,32 @@ class AugmentedRealityFragment : Fragment() {
 
     private val viewModel: MainViewModel by navGraphViewModels(R.id.nav_graph_xml)
 
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentAugmentedRealityBinding.inflate(inflater, container, false)
-        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner) {
-            when (viewModel.navState) {
-                MainViewModel.NavState.NONE -> throw IllegalStateException("this navState should never be possible in ArFragment")
-                MainViewModel.NavState.CREATE_TO_AR_TO_TRY -> findNavController().navigate(AugmentedRealityFragmentDirections.actionArFragmentToCreateFragment())
-                MainViewModel.NavState.MAPS_TO_EDIT -> findNavController().navigate(AugmentedRealityFragmentDirections.actionArFragmentToCreateFragment())
-                MainViewModel.NavState.MAPS_TO_AR_NEW -> findNavController().navigate(AugmentedRealityFragmentDirections.actionArFragmentToMapsFragment())
-                MainViewModel.NavState.MAPS_TO_AR_NAV -> findNavController().navigate(AugmentedRealityFragmentDirections.actionArFragmentToMapsFragment())
-                MainViewModel.NavState.MAPS_TO_AR_SEARCH -> findNavController().navigate(AugmentedRealityFragmentDirections.actionArFragmentToMapsFragment())
-            }
-        }
+//        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner) {
+//            Log.d("O_O", "we still called?")
+//            when (viewModel.navState) {
+//                MainViewModel.NavState.NONE -> throw IllegalStateException("this navState should never be possible in ArFragment")
+//                MainViewModel.NavState.CREATE_TO_AR_TO_TRY -> findNavController().navigate(AugmentedRealityFragmentDirections.actionArFragmentToCreateFragment())
+//                MainViewModel.NavState.MAPS_TO_EDIT -> findNavController().navigate(AugmentedRealityFragmentDirections.actionArFragmentToCreateFragment())
+//                MainViewModel.NavState.MAPS_TO_AR_NEW -> findNavController().navigate(AugmentedRealityFragmentDirections.actionArFragmentToMapsFragment())
+//                MainViewModel.NavState.MAPS_TO_AR_NAV -> findNavController().navigate(AugmentedRealityFragmentDirections.actionArFragmentToMapsFragment())
+//                MainViewModel.NavState.MAPS_TO_AR_SEARCH -> findNavController().navigate(AugmentedRealityFragmentDirections.actionArFragmentToMapsFragment())
+//            }
+//
+//        }
         return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
         lifecycleScope.launchWhenCreated {
-            loadModels()
+            withContext(Dispatchers.IO){
+                loadModels()
+
+            }
         }
 
         sceneView = binding.sceneView
@@ -179,7 +185,7 @@ class AugmentedRealityFragment : Fragment() {
             config.instantPlacementEnabled = false
         }
         sceneView.planeRenderer.planeRendererMode = PlaneRenderer.PlaneRendererMode.RENDER_TOP_MOST
-        //sceneView.planeRenderer.isShadowReceiver = false
+        sceneView.planeRenderer.isShadowReceiver = false
 
         sceneView.onArSessionCreated = {
             FileLog.d(TAG, "Session is created: $it")
@@ -191,6 +197,12 @@ class AugmentedRealityFragment : Fragment() {
 
         sceneView.lifecycle.addObserver(onArFrame = { arFrame ->
             cloudAnchorManager.onUpdate()
+
+            if (arFrame.isTrackingPlane && !isTracking) {
+                isTracking = true
+                binding.arExtendedFab.isEnabled = !isSearchingMode
+            }
+
             arFrame.updatedPlanes.forEach { plane ->
                 //Calculate distance between planes and resolved objects
                 if (placedNew) {
@@ -205,9 +217,7 @@ class AugmentedRealityFragment : Fragment() {
                     }
                 }
             }
-            if (navOnly && !isTracking && arFrame.isTrackingPlane) {
-                isTracking = true
-            }
+
             earth?.let {
                 if (it.trackingState == TrackingState.TRACKING) {
                     earthIsTrackingLoop(it)
@@ -223,20 +233,13 @@ class AugmentedRealityFragment : Fragment() {
         val arData = viewModel.arDataString
         if (arData.isNotBlank()) {
             sceneView.instructions.enabled = false
-            binding.arButtonConfirm.visibility = View.GONE
-            binding.arButtonClear.visibility = View.GONE
-            binding.arButtonUndo.visibility = View.GONE
             navOnly = true
             updateState(AppState.RESOLVE_ABLE)
         } else if (viewModel.navState == MainViewModel.NavState.MAPS_TO_AR_SEARCH) {
-            binding.arButtonClear.visibility = View.GONE
-            binding.arButtonConfirm.visibility = View.GONE
-            binding.arButtonUndo.visibility = View.GONE
             isSearchingMode = true
+            updateState(AppState.SEARCHING)
 
         } else if (viewModel.navState == MainViewModel.NavState.MAPS_TO_AR_NEW) {
-            binding.arButtonResolve.visibility = View.GONE
-            binding.arButtonDone.visibility = View.GONE
             navOnly = false
             updateState(AppState.PLACE_ANCHOR)
         }
@@ -382,7 +385,7 @@ class AugmentedRealityFragment : Fragment() {
                             .build(lifecycle)
                         infoRenderable.whenComplete { t, u ->
                             tempInfoNode.setRenderable(t)
-                            tempInfoNode.lookAt(sceneView.cameraNode)
+                            tempInfoNode.lookAt(sceneView.cameraNode, Direction(0f, 1f, 0f))
                         }
                     }
 
@@ -475,6 +478,9 @@ class AugmentedRealityFragment : Fragment() {
                                                 anchorNode = node
                                                 startRotation = sceneView.cameraNode.transform.rotation.y
                                                 binding.arButtonUndo.isEnabled = true
+                                                binding.arButtonUndo.visibility = View.VISIBLE
+                                                binding.arButtonClear.isEnabled = true
+                                                binding.arButtonClear.visibility = View.VISIBLE
 
 
                                                 // Calculation of the LAT/LONG/HEADING of the hit-test location to place a geospatial anchor
@@ -676,47 +682,32 @@ class AugmentedRealityFragment : Fragment() {
             updateState(AppState.PLACE_TARGET)
             setModelIcons(R.drawable.ic_baseline_emoji_flags_24)
         }
-        binding.arButtonResolve.setOnClickListener {
-            if (navOnly) {
-                if (isTracking) {
-                    cloudAnchorManager.detachAllAnchors()
-                    cloudAnchorManager.clearListeners()
-                    cloudAnchor = null
-                    jsonToAr(viewModel.arDataString)
-                    binding.arButtonResolve.isEnabled = false
-                    lifecycleScope.launch(Dispatchers.IO) {
-                        delay(10000L)
-                        if (appState == AppState.RESOLVING) {
-                            cloudAnchorManager.detachAllAnchors()
-                            cloudAnchorManager.clearListeners()
-                            cloudAnchor = null
-                            withContext(Dispatchers.Main) {
-                                updateState(AppState.RESOLVE_FAIL)
-                            }
-                        }
-                    }
-                } else {
-                    updateState(AppState.RESOLVE_BUT_NOT_READY)
-                }
-            } else if (isSearchingMode) {
-                //TODO resolve closest or lookingAt
-            } else {
-                throw IllegalStateException("Button Resolve should only be visible in navOnly mode")
+        binding.arExtendedFab.setOnClickListener {
+            when (appState) {
+                AppState.TARGET_PLACED -> onConfirm()
+                AppState.RESOLVE_ABLE -> onResolve()
+                else -> {}
             }
 
         }
+
+
         binding.arButtonUndo.setOnClickListener {
             if (pointList.size == 0) {
                 clear()
             } else if (pointList.size > 0) {
-                pointList.removeLast()
-                nodeList.removeLast().let {
-                    if (findModelName(it.model) == TARGET) {
-                        updateState(AppState.PLACE_TARGET)
+                if ((appState == AppState.PLACE_TARGET || appState == AppState.PLACE_OBJECT) && pointList.last().modelName == TARGET) {
+                    updateState(AppState.TARGET_PLACED)
+                } else {
+                    pointList.removeLast()
+                    nodeList.removeLast().let {
+                        if (findModelName(it.model) == TARGET) {
+                            updateState(AppState.PLACE_TARGET)
+                        }
+                        it.parent = null
                     }
-                    it.parent = null
+                    adapter.notifyItemRemoved(pointList.lastIndex + 1)
                 }
-                adapter.notifyItemRemoved(pointList.lastIndex + 1)
             }
         }
         binding.arButtonClear.setOnClickListener {
@@ -727,79 +718,91 @@ class AugmentedRealityFragment : Fragment() {
             sceneView.arCameraStream.isDepthOcclusionEnabled = !sceneView.arCameraStream.isDepthOcclusionEnabled
             true
         }
-        binding.arButtonConfirm.setOnClickListener {
-            if (appState == AppState.TARGET_PLACED) {
-                val json = arToJsonString()
-                viewModel.arDataString = json
+        binding.arModelSizeToggle.addOnButtonCheckedListener { group, checkedId, isChecked ->
+            when (checkedId) {
+                R.id.ar_model_icon_s -> {
+                    scale = 1f
+                }
+                R.id.ar_model_icon_m -> {
+                    scale = 1.5f
+                }
+                R.id.ar_model_icon_l -> {
+                    scale = 2f
+                }
+            }
+        }
+    }
+
+
+    private fun onConfirm() {
+        val json = arToJsonString()
+        viewModel.arDataString = json
+        viewModel.currentPlace?.let {
+            it.ardata = json
+            it.lat = geoLat
+            it.lng = geoLng
+            it.heading = geoHdg
+            it.alt = geoAlt
+        }
+        when (viewModel.navState) {
+            MainViewModel.NavState.MAPS_TO_AR_NEW -> {
+                viewModel.geoLat = geoLat
+                viewModel.geoLng = geoLng
+                viewModel.geoAlt = geoAlt
+                viewModel.geoHdg = geoHdg
+                findNavController().navigate(AugmentedRealityFragmentDirections.actionArFragmentToCreateFragment())
+            }
+            MainViewModel.NavState.MAPS_TO_EDIT -> {
                 viewModel.currentPlace?.let {
-                    it.ardata = json
                     it.lat = geoLat
                     it.lng = geoLng
                     it.heading = geoHdg
                     it.alt = geoAlt
-                }
-                when (viewModel.navState) {
-                    MainViewModel.NavState.MAPS_TO_AR_NEW -> {
-                        viewModel.geoLat = geoLat
-                        viewModel.geoLng = geoLng
-                        viewModel.geoAlt = geoAlt
-                        viewModel.geoHdg = geoHdg
-                        findNavController().navigate(AugmentedRealityFragmentDirections.actionArFragmentToCreateFragment())
-                    }
-                    MainViewModel.NavState.MAPS_TO_EDIT -> {
-                        viewModel.currentPlace?.let {
-                            it.lat = geoLat
-                            it.lng = geoLng
-                            it.heading = geoHdg
-                            it.alt = geoAlt
-                            findNavController().navigate(AugmentedRealityFragmentDirections.actionArFragmentToCreateFragment())
-                        } ?: FileLog.e(TAG, "Navstate is edit, but currentplace is null in ARFragment ")
-                    }
-                    else -> FileLog.e(TAG, "Wrong Navstate onClick Confirm is ${viewModel.navState}")
-                }
-            } else {
-                Utils.toast("You need to place your destination target first.")
+                    findNavController().navigate(AugmentedRealityFragmentDirections.actionArFragmentToCreateFragment())
+                } ?: FileLog.e(TAG, "Navstate is edit, but currentplace is null in ARFragment ")
             }
-        }
-        binding.arButtonDone.setOnClickListener {
-            when (viewModel.navState) {
-                MainViewModel.NavState.CREATE_TO_AR_TO_TRY -> findNavController().navigate(AugmentedRealityFragmentDirections.actionArFragmentToCreateFragment())
-                MainViewModel.NavState.MAPS_TO_AR_NAV -> findNavController().navigate(AugmentedRealityFragmentDirections.actionArFragmentToMapsFragment())
-                MainViewModel.NavState.MAPS_TO_AR_SEARCH -> findNavController().navigate(AugmentedRealityFragmentDirections.actionArFragmentToMapsFragment())
-                else -> throw IllegalStateException("this navState should never be possible in ArFragment: ${viewModel.navState}")
-            }
-        }
-        binding.arButtonDone.setOnLongClickListener {
-            placedNew = true
-            true
-        }
-        binding.arModelFrameS.setOnClickListener {
-            scale = 1f
-            binding.arModelFrameS.setBackgroundResource(R.drawable.rounded_corners_highlighted)
-            binding.arModelFrameM.setBackgroundResource(R.drawable.rounded_corners)
-            binding.arModelFrameL.setBackgroundResource(R.drawable.rounded_corners)
-        }
-        binding.arModelFrameM.setOnClickListener {
-            scale = 1.5f
-            binding.arModelFrameS.setBackgroundResource(R.drawable.rounded_corners)
-            binding.arModelFrameM.setBackgroundResource(R.drawable.rounded_corners_highlighted)
-            binding.arModelFrameL.setBackgroundResource(R.drawable.rounded_corners)
-        }
-        binding.arModelFrameL.setOnClickListener {
-            scale = 2f
-            binding.arModelFrameS.setBackgroundResource(R.drawable.rounded_corners)
-            binding.arModelFrameM.setBackgroundResource(R.drawable.rounded_corners)
-            binding.arModelFrameL.setBackgroundResource(R.drawable.rounded_corners_highlighted)
+            else -> FileLog.e(TAG, "Wrong Navstate onClick Confirm is ${viewModel.navState}")
         }
     }
 
+    private fun onResolve() {
+        if (navOnly) {
+            if (isTracking) {
+                cloudAnchorManager.detachAllAnchors()
+                cloudAnchorManager.clearListeners()
+                cloudAnchor = null
+                jsonToAr(viewModel.arDataString)
+                binding.arExtendedFab.isEnabled = false
+                lifecycleScope.launch(Dispatchers.IO) {
+                    delay(10000L)
+                    if (appState == AppState.RESOLVING) {
+                        cloudAnchorManager.detachAllAnchors()
+                        cloudAnchorManager.clearListeners()
+                        cloudAnchor = null
+                        withContext(Dispatchers.Main) {
+                            updateState(AppState.RESOLVE_FAIL)
+                        }
+                    }
+                }
+            } else {
+                updateState(AppState.RESOLVE_BUT_NOT_READY)
+            }
+        } else if (isSearchingMode) {
+            //TODO resolve closest or lookingAt
+        } else {
+            throw IllegalStateException("Button Resolve should only be visible in navOnly mode")
+        }
+    }
+
+
     private fun setModelIcons(iconId: Int) {
-        binding.arModelIconS.setImageResource(iconId)
-        binding.arModelIconM.setImageResource(iconId)
-        binding.arModelIconL.setImageResource(iconId)
+        binding.arModelIconS.icon = requireActivity().getDrawable(iconId)
+        binding.arModelIconM.icon = requireActivity().getDrawable(iconId)
+        binding.arModelIconL.icon = requireActivity().getDrawable(iconId)
     }
 
     private suspend fun loadModels() {
+        //GLBLoader crashes onDestroy
         modelMap[ARROW_FORWARD] = GLBLoader.loadModel(requireContext(), lifecycle, "models/arrow_fw.glb")
         modelMap[ARROW_LEFT] = GLBLoader.loadModel(requireContext(), lifecycle, "models/arrow_lf.glb")
         modelMap[ARROW_RIGHT] = GLBLoader.loadModel(requireContext(), lifecycle, "models/arrow_rd.glb")
@@ -841,10 +844,9 @@ class AugmentedRealityFragment : Fragment() {
         previewArrow?.parent = null
         previewArrow = null
         binding.arFabLayout.visibility = View.GONE
-        binding.arModelFrameS.visibility = View.GONE
-        binding.arModelFrameM.visibility = View.GONE
-        binding.arModelFrameL.visibility = View.GONE
+        binding.arModelSizeToggle.visibility = View.INVISIBLE
         binding.arButtonUndo.isEnabled = false
+        binding.arButtonClear.isEnabled = false
         updateState(AppState.PLACE_ANCHOR)
     }
 
@@ -864,6 +866,10 @@ class AugmentedRealityFragment : Fragment() {
 
             }
             AppState.PLACE_ANCHOR -> {
+                updateExtendedFab("PLACE")
+                binding.arButtonClear.visibility = View.GONE
+                binding.arButtonUndo.visibility = View.GONE
+                binding.arModelSizeToggle.visibility = View.GONE
                 "Place the anchor, by tapping on a surface \n \n" +
                         "Make sure the VPS accuracy is good before placing!"
             }
@@ -884,9 +890,8 @@ class AugmentedRealityFragment : Fragment() {
                         "then try placing again"
             }
             AppState.PLACE_OBJECT -> {
-                binding.arModelFrameS.visibility = View.VISIBLE
-                binding.arModelFrameM.visibility = View.VISIBLE
-                binding.arModelFrameL.visibility = View.VISIBLE
+                updateExtendedFab("PLACE")
+                binding.arModelSizeToggle.visibility = View.VISIBLE
                 "Place the arrow, by tapping on a surface \n \n" +
                         "Make sure the last placed object is still in the field of view"
             }
@@ -894,20 +899,22 @@ class AugmentedRealityFragment : Fragment() {
                 "Select the arrow type to place next, by clicking on the Button in the bottom-right"
             }
             AppState.PLACE_TARGET -> {
-                binding.arModelFrameS.visibility = View.VISIBLE
-                binding.arModelFrameM.visibility = View.VISIBLE
-                binding.arModelFrameL.visibility = View.VISIBLE
+                updateExtendedFab("PLACE")
+                binding.arModelSizeToggle.visibility = View.VISIBLE
                 "Place the destination marker by tapping on the surface \n \n" +
                         "This will be the last marker to place"
             }
             AppState.TARGET_PLACED -> {
-                binding.arModelFrameS.visibility = View.GONE
-                binding.arModelFrameM.visibility = View.GONE
-                binding.arModelFrameL.visibility = View.GONE
+                binding.arModelSizeToggle.visibility = View.GONE
+                updateExtendedFab("CONFIRM")
                 "You have successfully created a full route\n \n" +
                         "Press confirm if everything is ready"
             }
             AppState.RESOLVE_ABLE -> {
+                updateExtendedFab("RESOLVE")
+                binding.arButtonClear.visibility = View.GONE
+                binding.arButtonUndo.visibility = View.GONE
+                binding.arModelSizeToggle.visibility = View.GONE
                 "An ArRoute is available to be resolved \n \n" +
                         "Walk around the anticipated anchor location first \n" +
                         " and move the phone around as much as possible \n" +
@@ -919,19 +926,43 @@ class AugmentedRealityFragment : Fragment() {
                         "Then try resolve again"
             }
             AppState.RESOLVING -> {
-                binding.arButtonResolve.isEnabled = false
+                binding.arExtendedFab.isEnabled = false
                 "Trying to resolve the cloud anchor... \n \n" +
                         "Please wait a couple seconds and potentially try again if it doesn't load"
             }
             AppState.RESOLVE_SUCCESS -> {
-                binding.arButtonResolve.isEnabled = true
+                binding.arExtendedFab.isEnabled = true
                 "Successfully resolved the cloud anchor and the attached route \n \n" +
                         "Follow the arrows on your screen to the destination point"
             }
             AppState.RESOLVE_FAIL -> {
-                binding.arButtonResolve.isEnabled = true
+                binding.arExtendedFab.isEnabled = true
                 "Resolving of cloud anchor failed \n \n" +
                         "Move your phone around the anchor area and then try to resolve again"
+            }
+            AppState.SEARCHING -> {
+                updateExtendedFab("RESOLVE")
+                binding.arButtonClear.visibility = View.GONE
+                binding.arButtonUndo.visibility = View.GONE
+                binding.arModelSizeToggle.visibility = View.GONE
+                "Searching Mode \n \n  Anchors of routes are shown, click resolve when you found one"
+            }
+        }
+    }
+
+    private fun updateExtendedFab(type: String) {
+        when (type) {
+            "PLACE" -> {
+                binding.arExtendedFab.text = "PLACE"
+                binding.arExtendedFab.icon = requireActivity().getDrawable(R.drawable.ic_place_item_24)
+            }
+            "CONFIRM" -> {
+                binding.arExtendedFab.text = "CONFIRM"
+                binding.arExtendedFab.icon = requireActivity().getDrawable(R.drawable.ic_baseline_cloud_upload_24)
+            }
+            "RESOLVE" -> {
+                binding.arExtendedFab.text = "RESOLVE"
+                binding.arExtendedFab.icon = requireActivity().getDrawable(R.drawable.ic_baseline_cloud_download_24)
             }
         }
     }
@@ -970,6 +1001,7 @@ class AugmentedRealityFragment : Fragment() {
     }
 
     override fun onStop() {
+        FileLog.d("O_O", "onStop")
         cloudAnchorManager.detachAllAnchors()
         cloudAnchorManager.clearListeners()
         sceneView.onStop(this)
@@ -982,6 +1014,7 @@ class AugmentedRealityFragment : Fragment() {
     }
 
     override fun onDestroy() {
+        FileLog.d("O_O", "onDestroy")
         sceneView.onDestroy(this)
         _binding = null
         super.onDestroy()

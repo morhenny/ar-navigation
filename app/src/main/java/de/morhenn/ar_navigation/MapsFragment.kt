@@ -16,6 +16,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.activity.addCallback
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
@@ -67,6 +68,11 @@ class MapsFragment : Fragment(), OnMapReadyCallback, SensorEventListener {
         _binding = FragmentMapsBinding.inflate(inflater, container, false)
         infoWindowAdapter = MyInfoWindowAdapter(InfoWindowBinding.inflate(inflater, container, false), viewModel)
         sensorManager = requireActivity().getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner) {
+            //TODO possibly add a confirmation dialog to exit
+            FileLog.d("O_O", "Exiting app onBackPress")
+            requireActivity().finish()
+        }
         return binding.root
     }
 
