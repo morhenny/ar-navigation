@@ -1,6 +1,7 @@
 package de.morhenn.ar_navigation
 
 import android.annotation.SuppressLint
+import android.graphics.Color
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -16,9 +17,13 @@ import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.*
 import de.morhenn.ar_navigation.databinding.FragmentCreateBinding
+import de.morhenn.ar_navigation.model.ArRoute
 import de.morhenn.ar_navigation.persistance.NewPlace
 import de.morhenn.ar_navigation.persistance.Place
 import de.morhenn.ar_navigation.util.FileLog
+import de.morhenn.ar_navigation.util.GeoUtils
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
 
 class CreateFragment : Fragment(), OnMapReadyCallback {
 
@@ -186,6 +191,27 @@ class CreateFragment : Fragment(), OnMapReadyCallback {
                 .zoom(18f)
                 .target(latLng)
             map.animateCamera(CameraUpdateFactory.newCameraPosition(builder.build()))
+
+            try {
+                val arRoute = Json.decodeFromString<ArRoute>(viewModel.arDataString)
+                viewModel.currentPlace?.let { place ->
+                    var lastPoint = latLng
+                    arRoute.pointsList.forEach {
+                        val pointLatLng = GeoUtils.getLatLngByLocalCoordinateOffset(place.lat, place.lng, place.heading, it.position.x, it.position.z)
+                        val polyline1 = map.addPolyline(PolylineOptions()
+                            .clickable(false)
+                            .add(lastPoint)
+                            .add(pointLatLng))
+                        if (it.modelName == AugmentedRealityFragment.ModelName.TARGET) {
+                            polyline1.color = Color.RED
+                        }
+                        lastPoint = pointLatLng
+                    }
+                }
+            } catch (e: Exception) {
+                FileLog.e("TAG", "ArData could not be parsed: $e")
+            }
+
         } else { //If no anchor location is provided, zoom the map on the users location instead
             locationProvider?.let {
                 it.lastLocation.addOnSuccessListener { location ->

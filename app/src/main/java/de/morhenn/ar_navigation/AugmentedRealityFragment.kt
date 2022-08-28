@@ -658,7 +658,7 @@ class AugmentedRealityFragment : Fragment() {
 
                 val distanceToHitInKm = distanceToHit / 1000
 
-                val latLng = GeoUtils.getPointByDistanceAndBearing(cameraGeospatialPose.latitude, cameraGeospatialPose.longitude, bearingToHit, distanceToHitInKm.toDouble())
+                val latLng = GeoUtils.getLatLngByDistanceAndBearing(cameraGeospatialPose.latitude, cameraGeospatialPose.longitude, bearingToHit, distanceToHitInKm.toDouble())
                 geoLat = latLng.latitude
                 geoLng = latLng.longitude
                 geoAlt = cameraGeospatialPose.altitude - distanceOfCameraToGround
@@ -710,7 +710,7 @@ class AugmentedRealityFragment : Fragment() {
 
         val distanceToHitInKm = distanceToHit / 1000
 
-        val latLng = GeoUtils.getPointByDistanceAndBearing(cameraGeospatialPose.latitude, cameraGeospatialPose.longitude, bearingToHit, distanceToHitInKm.toDouble())
+        val latLng = GeoUtils.getLatLngByDistanceAndBearing(cameraGeospatialPose.latitude, cameraGeospatialPose.longitude, bearingToHit, distanceToHitInKm.toDouble())
 
         // Predicted location not needed, besides debug
 //        val predictionAnchor = earth!!.createAnchor(latLng.latitude, latLng.longitude, cameraGeospatialPose.altitude - distanceOfCameraToGround, 0f, 0f, 0f, 1f)

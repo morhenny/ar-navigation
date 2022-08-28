@@ -4,26 +4,37 @@ import com.google.android.gms.maps.model.LatLng
 
 object GeoUtils {
 
-    fun getPointByDistanceAndBearing(lat: Double, lon: Double, bearing: Double, distanceKm: Double): LatLng {
+    fun getLatLngByDistanceAndBearing(lat: Double, lng: Double, bearing: Double, distanceKm: Double): LatLng {
         val earthRadius = 6378.1
 
         val bearingR = Math.toRadians(bearing)
 
         val latR = Math.toRadians(lat)
-        val lonR = Math.toRadians(lon)
+        val lngR = Math.toRadians(lng)
 
         val distanceToRadius = distanceKm / earthRadius
 
         val newLatR = Math.asin(Math.sin(latR) * Math.cos(distanceToRadius) +
                 Math.cos(latR) * Math.sin(distanceToRadius) * Math.cos(bearingR))
-        val newLonR = lonR + Math.atan2(Math.sin(bearingR) * Math.sin(distanceToRadius) * Math.cos(latR),
+        val newLonR = lngR + Math.atan2(Math.sin(bearingR) * Math.sin(distanceToRadius) * Math.cos(latR),
             Math.cos(distanceToRadius) - Math.sin(latR) * Math.sin(newLatR))
 
         val latNew = Math.toDegrees(newLatR)
-        val lonNew = Math.toDegrees(newLonR)
+        val lngNew = Math.toDegrees(newLonR)
 
-        return LatLng(latNew, lonNew)
+        return LatLng(latNew, lngNew)
     }
+
+
+    //calculate new Latlng with offsetX and offsetY
+    //offsetX in meters towards startHeading
+    //offsetY in meters towards startHeading + 90°
+    fun getLatLngByLocalCoordinateOffset(startLat: Double, startLng: Double, startHeading: Double, offsetX: Float, offsetZ: Float): LatLng {
+        val latLngOnlyX = getLatLngByDistanceAndBearing(startLat, startLng, (startHeading + 90.0) % 360, offsetX / 1000.0)
+
+        return getLatLngByDistanceAndBearing(latLngOnlyX.latitude, latLngOnlyX.longitude, startHeading, -offsetZ / 1000.0)
+    }
+
 
     fun distanceBetweenTwoCoordinates(latlng1: LatLng, latlng2: LatLng): Double {
         val earthRadius = 6378.1
