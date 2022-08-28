@@ -2,6 +2,7 @@ package de.morhenn.ar_navigation
 
 import android.net.Uri.parse
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -14,7 +15,6 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.ar.core.*
 import com.google.ar.sceneform.rendering.ModelRenderable
 import com.google.ar.sceneform.rendering.Renderable
-import com.google.ar.sceneform.rendering.ViewRenderable
 import de.morhenn.ar_navigation.AugmentedRealityFragment.ModelName.*
 import de.morhenn.ar_navigation.databinding.FragmentAugmentedRealityBinding
 import de.morhenn.ar_navigation.model.ArPoint
@@ -31,7 +31,10 @@ import io.github.sceneview.ar.node.ArModelNode
 import io.github.sceneview.ar.node.ArNode
 import io.github.sceneview.ar.node.PlacementMode
 import io.github.sceneview.ar.scene.PlaneRenderer
-import io.github.sceneview.math.*
+import io.github.sceneview.math.Position
+import io.github.sceneview.math.Scale
+import io.github.sceneview.math.toFloat3
+import io.github.sceneview.math.toVector3
 import io.github.sceneview.model.await
 import io.github.sceneview.node.ViewNode
 import kotlinx.coroutines.Dispatchers
@@ -65,7 +68,8 @@ class AugmentedRealityFragment : Fragment() {
         private const val HEAD_ACC_3 = 5.0
         private const val HEAD_ACC_4 = 2.5
         private const val IGNORE_GEO_ACC = true
-        private const val SEARCH_RADIUS = 500.0
+        private const val SEARCH_RADIUS = 200.0
+        private const val MIN_RESOLVE_DISTANCE = 5
     }
 
     enum class AppState {
@@ -186,7 +190,7 @@ class AugmentedRealityFragment : Fragment() {
 
             if (arFrame.isTrackingPlane && !isTracking) {
                 isTracking = true
-                binding.arExtendedFab.isEnabled = !isSearchingMode
+                binding.arExtendedFab.isEnabled = true //!isSearchingMode
                 if (!navOnly && !isSearchingMode) {
                     anchorCircle = AnchorHostingPoint(requireContext(), Filament.engine, sceneView.scene)
                     anchorCircle.enabled = true
@@ -210,8 +214,6 @@ class AugmentedRealityFragment : Fragment() {
                 if (anchorCircle.allSegmentsHighlighted) {
                     onHost()
                 }
-            } else if (appState == AppState.PLACE_OBJECT) {
-
             }
 
             //Only needed for Accuracy Testing
@@ -236,6 +238,7 @@ class AugmentedRealityFragment : Fragment() {
                 }
             } ?: run {
                 earth = sceneView.arSession?.earth
+                Log.d("O_O", "Earth object assigned")
             }
         })
 
@@ -294,21 +297,25 @@ class AugmentedRealityFragment : Fragment() {
 
 
         } else if (!earthAnchorPlaced && (viewModel.navState == MainViewModel.NavState.MAPS_TO_AR_NAV || viewModel.navState == MainViewModel.NavState.CREATE_TO_AR_TO_TRY)) {
+            //Prediction of the cloud anchor location in NAV mode
             viewModel.currentPlace?.let {
                 if (cameraGeospatialPose.horizontalAccuracy < 2) { //TODO potentially change preview render, depending on accuracy and distance to it
                     val earthAnchor = earth.createAnchor(it.lat, it.lng, it.alt, 0f, 0f, 0f, 1f)
+                    FileLog.d("O_O", "Creating the earthAnchor at ${earthAnchor.pose.position}")
                     earthAnchorPlaced = true
-                    earthNode = ArNode(earthAnchor).also { node ->
+                    earthNode = ArNode().also { node ->
+                        node.anchor = earthAnchor
                         node.setModel(modelMap[ANCHOR_PREVIEW])
                         node.parent = sceneView
                     }
+                    FileLog.d("O_O", "Creating the earthNode at ${earthNode!!.position} and world: ${earthNode!!.worldPosition}")
                     previewArrow = ArNode().also { arrow ->
                         arrow.position = Position(0f, 2f, 0f)
                         arrow.parent = earthNode
                         arrow.setModel(modelMap[ANCHOR_PREVIEW_ARROW])
                     }
                 }
-                //FileLog.d("VPS", "Earth Node was placed at ${earthAnchor.pose.position}")
+                //FileLog.d("O_O", "Earth Node was placed at ${earthAnchor.pose.position}")
             }
         }
     }
@@ -357,14 +364,15 @@ class AugmentedRealityFragment : Fragment() {
     private fun renderObservedPlaces(places: List<Place>) {
         earth?.let { earth ->
             for (place in places) {
-                val tempEarthAnchor = earth.createAnchor(place.lat, place.lng, place.alt, 0f, 0f, 0f, 1f)
                 placesInRadiusNodeMap[place]?.let {
-                    it.position = tempEarthAnchor.pose.position
+                    //it.position = tempEarthAnchor.pose.position
                     //TODO this might not be needed anymore ~ earth anchors should update automatically, but don't quite
                 } ?: run {
+                    val tempEarthAnchor = earth.createAnchor(place.lat, place.lng, place.alt, 0f, 0f, 0f, 1f)
+
                     val tempEarthNode = ArNode().also { node ->
-                        node.isSmoothPoseEnable = false //TODO this is a temporary fix, that makes the nodes position be updated by the earth anchor //check in 0.9.0
                         node.anchor = tempEarthAnchor
+                        node.isSmoothPoseEnable = false //TODO this is a temporary fix, that makes the nodes position be updated by the earth anchor //check in 0.9.0
                         node.setModel(modelMap[ANCHOR_PREVIEW])
                         node.parent = sceneView
                     }
@@ -375,23 +383,23 @@ class AugmentedRealityFragment : Fragment() {
                         arrow.parent = tempEarthNode
                     }
 
-                    val tempInfoNode = ViewNode().also { node ->
-                        node.position = Position(0f, 1f, 0f)
-                        //node.rotation = Rotation(0f, 0f, 0f)
-                        node.parent = tempEarthNode
-                        node.lookAt(sceneView.cameraNode) //TODO lookat doesn't work properly here
-                    }
-                    lifecycleScope.launch {
-                        val infoRenderable = ViewRenderable.builder()
-                            .setView(requireContext(), R.layout.ar_place_info)
-                            .build(lifecycle)
-                        infoRenderable.whenComplete { t, u ->
-                            tempInfoNode.setRenderable(t)
-                            tempInfoNode.lookAt(sceneView.cameraNode, Direction(0f, 1f, 0f))
-                        }
-                    }
+//                    val tempInfoNode = ViewNode().also { node ->
+//                        node.position = Position(0f, 1f, 0f)
+//                        //node.rotation = Rotation(0f, 0f, 0f)
+//                        node.parent = tempEarthNode
+//                        node.lookAt(sceneView.cameraNode) //TODO lookat doesn't work properly here
+//                    }
+//                    lifecycleScope.launch {
+//                        val infoRenderable = ViewRenderable.builder()
+//                            .setView(requireContext(), R.layout.ar_place_info)
+//                            .build(lifecycle)
+//                        infoRenderable.whenComplete { t, u ->
+//                            tempInfoNode.setRenderable(t)
+//                            tempInfoNode.lookAt(sceneView.cameraNode, Direction(0f, 1f, 0f))
+//                        }
+//                    }
                     placesInRadiusEarthAnchors.add(tempEarthAnchor)
-                    placesInRadiusInfoNodes.add(tempInfoNode)
+//                    placesInRadiusInfoNodes.add(tempInfoNode)
                     placesInRadiusNodeMap[place] = tempEarthNode
                 }
             }
@@ -589,52 +597,92 @@ class AugmentedRealityFragment : Fragment() {
                 updateState(AppState.RESOLVE_BUT_NOT_READY)
             }
         } else if (isSearchingMode) {
+            if (placesInRadiusNodeMap.isEmpty()) {
+                Utils.toast("No Places available around!")
+                FileLog.w("O_O", "Trying to resolve inSearchingMode, but no places around.")
+            } else {
+                var shortestDistance = Float.MAX_VALUE
+                var closestNode: Pair<Place, ArNode>
+                placesInRadiusNodeMap.keys.forEach { place ->
+                    placesInRadiusNodeMap[place]?.let {
+                        if (distanceOfCameraToNode(it) < MIN_RESOLVE_DISTANCE) {
+                            val node = it
+                            FileLog.d("O_O", "Trying to resolve Place: ${place.name} ...")
+                            node.resolveCloudAnchor(place.id, onResolveCompleted)
+                            //TODO store all resolving anchors to detach onStop
+                        }
+
+                    }
+                }
+                placesInRadiusNodeMap.values.forEach {
+                    val distance = distanceOfCameraToNode(it)
+                    if (distance < shortestDistance) {
+                        shortestDistance = distance
+                    }
+                }
+            }
             //TODO resolve closest or lookingAt
         } else {
             throw IllegalStateException("Button Resolve should only be visible in navOnly mode")
         }
     }
 
+    val onResolveCompleted = { anchor: Anchor, success: Boolean ->
+        FileLog.d("O_O", "Resolved an anchor with success: $success")
+    }
+
+    private fun distanceOfCameraToNode(node: ArNode): Float {
+        val vectorUp = node.pose!!.yDirection
+
+        val cameraTransform = sceneView.cameraNode.transform
+        val cameraPos = cameraTransform.position
+        val cameraOnPlane = cameraPos.minus(vectorUp.times((cameraPos.minus(node.position)).times(vectorUp)))
+
+        return (node.position.minus(cameraOnPlane)).toVector3().length()
+    }
+
     private fun calculateLatLongOfPlacementNode(cameraGeospatialPose: GeospatialPose) {
         placementNode?.let { node ->
-            val vectorUp = node.pose!!.yDirection
+            node.pose?.let { pose ->
+                val vectorUp = node.pose!!.yDirection
 
-            val cameraTransform = sceneView.cameraNode.transform
-            val cameraPos = cameraTransform.position
-            val cameraOnPlane = cameraPos.minus(vectorUp.times((cameraPos.minus(node.position)).times(vectorUp)))
-            val distanceOfCameraToGround = (cameraPos.minus(cameraOnPlane)).toVector3().length()
+                val cameraTransform = sceneView.cameraNode.transform
+                val cameraPos = cameraTransform.position
+                val cameraOnPlane = cameraPos.minus(vectorUp.times((cameraPos.minus(node.position)).times(vectorUp)))
+                val distanceOfCameraToGround = (cameraPos.minus(cameraOnPlane)).toVector3().length()
 
-            //Angle between forward and the placementNode should always be ZERO
+                //Angle between forward and the placementNode should always be ZERO
 
-            val bearingToHit = cameraGeospatialPose.heading
-            val distanceToHit = (node.position.minus(cameraOnPlane)).toVector3().length()
+                val bearingToHit = cameraGeospatialPose.heading
+                val distanceToHit = (node.position.minus(cameraOnPlane)).toVector3().length()
 
-            val distanceToHitInKm = distanceToHit / 1000
+                val distanceToHitInKm = distanceToHit / 1000
 
-            val latLng = GeoUtils.getPointByDistanceAndBearing(cameraGeospatialPose.latitude, cameraGeospatialPose.longitude, bearingToHit, distanceToHitInKm.toDouble())
-            geoLat = latLng.latitude
-            geoLng = latLng.longitude
-            geoAlt = cameraGeospatialPose.altitude - distanceOfCameraToGround
-            geoHdg = bearingToHit
-            (requireActivity().getString(
-                R.string.geospatial_pose,
-                cameraGeospatialPose.latitude,
-                cameraGeospatialPose.longitude,
-                cameraGeospatialPose.horizontalAccuracy,
-                cameraGeospatialPose.altitude,
-                cameraGeospatialPose.verticalAccuracy,
-                cameraGeospatialPose.heading,
-                cameraGeospatialPose.headingAccuracy
-            ) + requireActivity().getString(
-                R.string.geospatial_anchor,
-                geoLat,
-                geoLng,
-                geoAlt,
-                geoHdg,
-                distanceToHit.toDouble()
-            )).also {
-                binding.arInfoText.text = it
-                FileLog.d(TAG, "PlacementNode location calculated: \n$it")
+                val latLng = GeoUtils.getPointByDistanceAndBearing(cameraGeospatialPose.latitude, cameraGeospatialPose.longitude, bearingToHit, distanceToHitInKm.toDouble())
+                geoLat = latLng.latitude
+                geoLng = latLng.longitude
+                geoAlt = cameraGeospatialPose.altitude - distanceOfCameraToGround
+                geoHdg = bearingToHit
+                (requireActivity().getString(
+                    R.string.geospatial_pose,
+                    cameraGeospatialPose.latitude,
+                    cameraGeospatialPose.longitude,
+                    cameraGeospatialPose.horizontalAccuracy,
+                    cameraGeospatialPose.altitude,
+                    cameraGeospatialPose.verticalAccuracy,
+                    cameraGeospatialPose.heading,
+                    cameraGeospatialPose.headingAccuracy
+                ) + requireActivity().getString(
+                    R.string.geospatial_anchor,
+                    geoLat,
+                    geoLng,
+                    geoAlt,
+                    geoHdg,
+                    distanceToHit.toDouble()
+                )).also {
+                    binding.arInfoText.text = it
+                    FileLog.d(TAG, "PlacementNode location calculated: \n$it")
+                }
             }
         }
     }
@@ -728,6 +776,7 @@ class AugmentedRealityFragment : Fragment() {
                 AppState.TARGET_PLACED -> onConfirm()
                 AppState.RESOLVE_ABLE -> onResolve()
                 AppState.RESOLVE_FAIL -> onResolve()
+                AppState.SEARCHING -> onResolve()
                 AppState.PLACE_ANCHOR -> onPlace()
                 AppState.PLACE_OBJECT -> onPlace()
                 AppState.PLACE_TARGET -> onPlace()

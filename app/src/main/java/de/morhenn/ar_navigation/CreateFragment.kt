@@ -218,6 +218,7 @@ class CreateFragment : Fragment(), OnMapReadyCallback {
     override fun onDestroy() {
         super.onDestroy()
         viewModel.currentPlace = null
+        viewModel.arDataString = ""
         _binding = null
     }
 

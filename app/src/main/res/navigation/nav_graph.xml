@@ -21,7 +21,9 @@
         android:label="ArFragment">
         <action
             android:id="@+id/action_arFragment_to_createFragment"
-            app:destination="@id/createFragment" />
+            app:destination="@id/createFragment"
+            app:popUpTo="@id/arFragment"
+            app:popUpToInclusive="true"/>
     </fragment>
     <fragment
         android:id="@+id/createFragment"
