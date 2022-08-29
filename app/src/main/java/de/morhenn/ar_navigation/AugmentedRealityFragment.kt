@@ -192,11 +192,11 @@ class AugmentedRealityFragment : Fragment() {
                 isTracking = true
                 binding.arExtendedFab.isEnabled = true //!isSearchingMode
                 if (!navOnly && !isSearchingMode) {
-                    anchorCircle = AnchorHostingPoint(requireContext(), Filament.engine, sceneView.scene)
+                    anchorCircle = AnchorHostingPoint(requireContext(), Filament.engine, sceneView.renderer.filamentScene)
                     anchorCircle.enabled = true
                     placementNode = ArModelNode(placementMode = PlacementMode.PLANE_HORIZONTAL).apply {
                         parent = sceneView
-                        isSmoothPoseEnable = true
+                        //isSmoothPoseEnable = true
                         isVisible = true
                     }
                 }
@@ -372,7 +372,7 @@ class AugmentedRealityFragment : Fragment() {
 
                     val tempEarthNode = ArNode().also { node ->
                         node.anchor = tempEarthAnchor
-                        node.isSmoothPoseEnable = false //TODO this is a temporary fix, that makes the nodes position be updated by the earth anchor //check in 0.9.0
+                        //node.isSmoothPoseEnable = false //TODO this is a temporary fix, that makes the nodes position be updated by the earth anchor //check in 0.9.0
                         node.setModel(modelMap[ANCHOR_PREVIEW])
                         node.parent = sceneView
                     }
@@ -440,7 +440,7 @@ class AugmentedRealityFragment : Fragment() {
                         cloudAnchorId = anchor.cloudAnchorId
                         route.pointsList.forEach {
                             ArModelNode().also { newNode ->
-                                newNode.followHitPosition = false
+                                //newNode.followHitPosition = false
                                 newNode.parent = anchorNode //Set the anchor to the cloudAnchor
                                 val pos = anchorNode.localToWorldPosition(it.position.toVector3())
                                 newNode.position = Position(pos.x, pos.y, pos.z)
@@ -483,7 +483,7 @@ class AugmentedRealityFragment : Fragment() {
                                     it.isVisible = false
                                     it.setModel(modelMap[ANCHOR])
                                 }
-                                startRotation = sceneView.cameraNode.transform.rotation.y
+                                startRotation = sceneView.camera.transform.rotation.y
                                 calculateLatLongOfPlacementNode(cameraGeospatialPose)
                                 updateState(AppState.WAITING_FOR_ANCHOR_CIRCLE)
                             }
@@ -494,11 +494,11 @@ class AugmentedRealityFragment : Fragment() {
                     anchorNode?.let { anchorNode ->
                         ArModelNode(PlacementMode.PLANE_HORIZONTAL).also {
 
-                            val angle = startRotation - sceneView.cameraNode.transform.rotation.y
+                            val angle = startRotation - sceneView.camera.transform.rotation.y
                             val rotationMatrix = rotation(axis = anchorNode.pose!!.yDirection, angle = angle) //Rotation around the Y-Axis of the anchorPlane
 
                             it.parent = anchorNode
-                            it.followHitPosition = false
+                            //it.followHitPosition = false
                             it.position = anchorNode.worldToLocalPosition(pNode.worldPosition.toVector3()).toFloat3()
                             it.quaternion = rotationMatrix.toQuaternion()
                             it.setModel(modelMap[selectedModel])
@@ -512,7 +512,7 @@ class AugmentedRealityFragment : Fragment() {
                         ArModelNode(PlacementMode.PLANE_HORIZONTAL).also {
                             it.rotation = pNode.rotation
                             it.parent = anchorNode
-                            it.followHitPosition = false
+                            //it.followHitPosition = false
                             it.position = anchorNode.worldToLocalPosition(pNode.worldPosition.toVector3()).toFloat3()
                             it.setModel(modelMap[TARGET])
                             it.modelScale = Scale(scale, scale, scale)
@@ -634,7 +634,7 @@ class AugmentedRealityFragment : Fragment() {
     private fun distanceOfCameraToNode(node: ArNode): Float {
         val vectorUp = node.pose!!.yDirection
 
-        val cameraTransform = sceneView.cameraNode.transform
+        val cameraTransform = sceneView.camera.transform
         val cameraPos = cameraTransform.position
         val cameraOnPlane = cameraPos.minus(vectorUp.times((cameraPos.minus(node.position)).times(vectorUp)))
 
@@ -646,7 +646,7 @@ class AugmentedRealityFragment : Fragment() {
             node.pose?.let { pose ->
                 val vectorUp = node.pose!!.yDirection
 
-                val cameraTransform = sceneView.cameraNode.transform
+                val cameraTransform = sceneView.camera.transform
                 val cameraPos = cameraTransform.position
                 val cameraOnPlane = cameraPos.minus(vectorUp.times((cameraPos.minus(node.position)).times(vectorUp)))
                 val distanceOfCameraToGround = (cameraPos.minus(cameraOnPlane)).toVector3().length()
@@ -691,7 +691,7 @@ class AugmentedRealityFragment : Fragment() {
 
         val hitNormal = hitResult.hitPose.yDirection //normal vector of the plane going up: n
 
-        val cameraTransform = sceneView.cameraNode.transform
+        val cameraTransform = sceneView.camera.transform
         val cameraPos = cameraTransform.position
         val cameraOnPlane = cameraPos.minus(hitNormal.times((cameraPos.minus(hitResult.hitPose.position)).times(hitNormal)))
         val distanceOfCameraToGround = (cameraPos.minus(cameraOnPlane)).toVector3().length()
@@ -924,7 +924,7 @@ class AugmentedRealityFragment : Fragment() {
         previewArrow = null
         placementNode?.isVisible = false
         anchorCircle.destroy()
-        anchorCircle = AnchorHostingPoint(requireContext(), Filament.engine, sceneView.scene)
+        anchorCircle = AnchorHostingPoint(requireContext(), Filament.engine, sceneView.renderer.filamentScene)
         anchorCircle.enabled = true
         binding.arFabLayout.visibility = View.GONE
         binding.arModelSizeToggle.visibility = View.INVISIBLE
