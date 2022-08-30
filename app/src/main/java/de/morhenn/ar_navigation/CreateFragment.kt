@@ -194,19 +194,29 @@ class CreateFragment : Fragment(), OnMapReadyCallback {
 
             try {
                 val arRoute = Json.decodeFromString<ArRoute>(viewModel.arDataString)
+                var lat = 0.0
+                var lng = 0.0
+                var heading = 0.0
+                var lastPoint = latLng
                 viewModel.currentPlace?.let { place ->
-                    var lastPoint = latLng
-                    arRoute.pointsList.forEach {
-                        val pointLatLng = GeoUtils.getLatLngByLocalCoordinateOffset(place.lat, place.lng, place.heading, it.position.x, it.position.z)
-                        val polyline1 = map.addPolyline(PolylineOptions()
-                            .clickable(false)
-                            .add(lastPoint)
-                            .add(pointLatLng))
-                        if (it.modelName == AugmentedRealityFragment.ModelName.TARGET) {
-                            polyline1.color = Color.RED
-                        }
-                        lastPoint = pointLatLng
+                    lat = place.lat
+                    lng = place.lng
+                    heading = place.heading
+                } ?: run {
+                    lat = viewModel.geoLat
+                    lng = viewModel.geoLng
+                    heading = viewModel.geoHdg
+                }
+                arRoute.pointsList.forEach {
+                    val pointLatLng = GeoUtils.getLatLngByLocalCoordinateOffset(lat, lng, heading, it.position.x, it.position.z)
+                    val polyline1 = map.addPolyline(PolylineOptions()
+                        .clickable(false)
+                        .add(lastPoint)
+                        .add(pointLatLng))
+                    if (it.modelName == AugmentedRealityFragment.ModelName.TARGET) {
+                        polyline1.color = Color.RED
                     }
+                    lastPoint = pointLatLng
                 }
             } catch (e: Exception) {
                 FileLog.e("TAG", "ArData could not be parsed: $e")

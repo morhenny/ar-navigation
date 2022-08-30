@@ -6,6 +6,7 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
@@ -15,6 +16,7 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.ar.core.*
 import com.google.ar.sceneform.rendering.ModelRenderable
 import com.google.ar.sceneform.rendering.Renderable
+import com.google.ar.sceneform.rendering.ViewRenderable
 import de.morhenn.ar_navigation.AugmentedRealityFragment.ModelName.*
 import de.morhenn.ar_navigation.databinding.FragmentAugmentedRealityBinding
 import de.morhenn.ar_navigation.model.ArPoint
@@ -23,6 +25,7 @@ import de.morhenn.ar_navigation.persistance.Place
 import de.morhenn.ar_navigation.util.FileLog
 import de.morhenn.ar_navigation.util.GeoUtils
 import de.morhenn.ar_navigation.util.Utils
+import dev.romainguy.kotlin.math.lookAt
 import dev.romainguy.kotlin.math.rotation
 import io.github.sceneview.Filament
 import io.github.sceneview.ar.ArSceneView
@@ -34,10 +37,7 @@ import io.github.sceneview.ar.node.ArModelNode
 import io.github.sceneview.ar.node.ArNode
 import io.github.sceneview.ar.node.PlacementMode
 import io.github.sceneview.ar.scene.PlaneRenderer
-import io.github.sceneview.math.Position
-import io.github.sceneview.math.Scale
-import io.github.sceneview.math.toFloat3
-import io.github.sceneview.math.toVector3
+import io.github.sceneview.math.*
 import io.github.sceneview.model.await
 import io.github.sceneview.node.ViewNode
 import kotlinx.coroutines.Dispatchers
@@ -360,11 +360,21 @@ class AugmentedRealityFragment : Fragment() {
 
     //Observing the LiveData of places around the current location, when in searchMode
     private fun observeAround() {
-        if (!observing && firstSearchFetched) {
-            observing = true
-            viewModel.placesInRadius.observe(viewLifecycleOwner) {
-                FileLog.d("O_O", "observing places around ${it.size}")
-                renderObservedPlaces(it)
+        if (firstSearchFetched) {
+            if (!observing) {
+                observing = true
+                viewModel.placesInRadius.observe(viewLifecycleOwner) {
+                    FileLog.d("O_O", "observing places around ${it.size}")
+                    renderObservedPlaces(it)
+                }
+            } else if (placesInRadiusInfoNodes.isNotEmpty()) {
+                placesInRadiusInfoNodes.forEach {
+                    with(it.parent as ArNode) {
+                        val cameraLocalPosition = worldToLocalPosition(sceneView.camera.position.toVector3()).toFloat3()
+                        val newQuaternion = lookAt(cameraLocalPosition, it.position, Direction(y = 1.0f)).toQuaternion()
+                        it.transform(quaternion = newQuaternion)
+                    }
+                }
             }
         }
     }
@@ -388,22 +398,20 @@ class AugmentedRealityFragment : Fragment() {
                         arrow.parent = tempEarthNode
                     }
 
-//                    val tempInfoNode = ViewNode().also { node ->
-//                        node.position = Position(0f, 1f, 0f)
-//                        //node.rotation = Rotation(0f, 0f, 0f)
-//                        node.parent = tempEarthNode
-//                        node.lookAt(sceneView.cameraNode) //TODO lookat doesn't work properly here
-//                    }
-//                    lifecycleScope.launch {
-//                        val infoRenderable = ViewRenderable.builder()
-//                            .setView(requireContext(), R.layout.ar_place_info)
-//                            .build(lifecycle)
-//                        infoRenderable.whenComplete { t, u ->
-//                            tempInfoNode.setRenderable(t)
-//                            tempInfoNode.lookAt(sceneView.cameraNode, Direction(0f, 1f, 0f))
-//                        }
-//                    }
-//                    placesInRadiusInfoNodes.add(tempInfoNode)
+                    val tempInfoNode = ViewNode().also { node ->
+                        node.position = Position(0f, 1f, 0f)
+                        node.parent = tempEarthNode
+                    }
+                    lifecycleScope.launch {
+                        val infoRenderable = ViewRenderable.builder()
+                            .setView(requireContext(), R.layout.ar_place_info)
+                            .build(lifecycle)
+                        infoRenderable.whenComplete { viewRenderable, _ ->
+                            tempInfoNode.setRenderable(viewRenderable)
+                            viewRenderable.view.findViewById<TextView>(R.id.info_name).text = place.name
+                        }
+                    }
+                    placesInRadiusInfoNodes.add(tempInfoNode)
                     placesInRadiusNodeMap[place] = tempEarthNode
                 }
             }
