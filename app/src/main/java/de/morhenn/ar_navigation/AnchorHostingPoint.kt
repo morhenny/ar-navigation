@@ -62,7 +62,7 @@ class AnchorHostingPoint(
         get() = highlightedSegments.all { it }
 
     init {
-        material = loadMaterial(context, engine, "anchor_hosting_point_1_25.filamat")
+        material = loadMaterial(context, engine, "anchor_hosting_point_1_20.filamat")
 
         val n = CIRCLE_SEGMENTS_COUNT
 
