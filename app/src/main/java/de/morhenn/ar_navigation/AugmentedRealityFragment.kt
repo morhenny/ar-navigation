@@ -1,6 +1,7 @@
 package de.morhenn.ar_navigation
 
 import android.net.Uri.parse
+import android.opengl.Matrix
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -105,7 +106,12 @@ class AugmentedRealityFragment : Fragment() {
         ANCHOR_SEARCH_ARROW,
         TARGET,
         AXIS,
+    }
 
+    enum class Indicator {
+        RIGHT,
+        LEFT,
+        NONE,
     }
 
     private var _binding: FragmentAugmentedRealityBinding? = null
@@ -176,7 +182,7 @@ class AugmentedRealityFragment : Fragment() {
             config.planeFindingEnabled = true
             //config.instantPlacementEnabled = false
         }
-        sceneView.planeRenderer.planeRendererMode = PlaneRenderer.PlaneRendererMode.RENDER_TOP_MOST
+        sceneView.planeRenderer.planeRendererMode = PlaneRenderer.PlaneRendererMode.RENDER_ALL
         sceneView.planeRenderer.isShadowReceiver = false
 
         sceneView.onArSessionCreated = {
@@ -197,7 +203,6 @@ class AugmentedRealityFragment : Fragment() {
                     anchorCircle.enabled = true
                     placementNode = ArModelNode(placementMode = PlacementMode.PLANE_HORIZONTAL).apply {
                         parent = sceneView
-                        //isSmoothPoseEnable = true
                         isVisible = true
                     }
                 }
@@ -255,11 +260,15 @@ class AugmentedRealityFragment : Fragment() {
             MainViewModel.NavState.MAPS_TO_AR_SEARCH -> {
                 isSearchingMode = true
                 updateState(AppState.SEARCHING)
-
             }
             MainViewModel.NavState.MAPS_TO_AR_NEW -> {
                 navOnly = false
                 updateState(AppState.PLACE_ANCHOR)
+            }
+            MainViewModel.NavState.CREATE_TO_AR_TO_TRY -> {
+                sceneView.instructions.enabled = false
+                navOnly = true
+                updateState(AppState.RESOLVE_ABLE)
             }
             else -> {
                 FileLog.w("O_O", "Unknown nav state in AR Fragment: ${viewModel.navState}")
@@ -303,27 +312,27 @@ class AugmentedRealityFragment : Fragment() {
             //Start observing search results
             observeAround()
 
-
         } else if (!earthAnchorPlaced && (viewModel.navState == MainViewModel.NavState.MAPS_TO_AR_NAV || viewModel.navState == MainViewModel.NavState.CREATE_TO_AR_TO_TRY)) {
             //Prediction of the cloud anchor location in NAV mode
             viewModel.currentPlace?.let {
                 if (cameraGeospatialPose.horizontalAccuracy < 2) { //TODO potentially change preview render, depending on accuracy and distance to it
                     val earthAnchor = earth.createAnchor(it.lat, it.lng, it.alt, 0f, 0f, 0f, 1f)
-                    FileLog.d("O_O", "Creating the earthAnchor at ${earthAnchor.pose.position}")
                     earthAnchorPlaced = true
                     earthNode = ArNode().apply {
                         anchor = earthAnchor
                         setModel(modelMap[ANCHOR_PREVIEW])
                         parent = sceneView
                     }
-                    FileLog.d("O_O", "Creating the earthNode at ${earthNode!!.position} and world: ${earthNode!!.worldPosition}")
                     previewArrow = ArNode().also { arrow ->
                         arrow.position = Position(0f, 2f, 0f)
                         arrow.parent = earthNode
                         arrow.setModel(modelMap[ANCHOR_PREVIEW_ARROW])
                     }
                 }
-                //FileLog.d("O_O", "Earth Node was placed at ${earthAnchor.pose.position}")
+            }
+        } else if (earthAnchorPlaced && cloudAnchor == null) {
+            earthNode?.let {
+                indicateDirectionIfNotInView(it)
             }
         }
     }
@@ -480,6 +489,7 @@ class AugmentedRealityFragment : Fragment() {
                             it.position = anchorNode.worldToLocalPosition(pNode.worldPosition.toVector3()).toFloat3()
                             it.quaternion = rotationMatrix.toQuaternion()
                             it.setModel(modelMap[selectedModel])
+                            updateState(AppState.PLACE_OBJECT)
                             addNode(it)
                             it.modelScale = Scale(scale, scale, scale)
                         }
@@ -522,7 +532,6 @@ class AugmentedRealityFragment : Fragment() {
                 }
             }
         }
-
     }
 
     private fun onConfirm() {
@@ -574,21 +583,10 @@ class AugmentedRealityFragment : Fragment() {
                 var shortestDistance = Float.MAX_VALUE
                 var closestNode: Pair<Place, ArNode>? = null
 
-                //resolve all places around
-//                placesInRadiusNodeMap.keys.forEach { place ->
-//                    placesInRadiusNodeMap[place]?.let {
-//                        if (distanceOfCameraToNode(it) < MIN_RESOLVE_DISTANCE) {
-//                            val node = ArNode()
-//                            FileLog.d("O_O", "Trying to resolve Place: ${place.name} ...")
-//                            node.resolveCloudAnchor(place.id, onResolveCompleted)
-//                        }
-//                    }
-//                }
-
-                //resolve closest node
+                //resolve closest node that is in view
                 placesInRadiusNodeMap.entries.forEach {
                     val distance = distanceOfCameraToNode(it.value)
-                    if (distance < shortestDistance) {
+                    if (distance < shortestDistance && isNodeInView(it.value)) {
                         shortestDistance = distance
                         closestNode = Pair(it.key, it.value)
                     }
@@ -611,7 +609,9 @@ class AugmentedRealityFragment : Fragment() {
                 anchorNode.position = Position(0f, 0f, 0f)
                 anchorNode.parent = sceneView
                 anchorNode.resolveCloudAnchor(route.cloudAnchorId) { anchor: Anchor, success: Boolean ->
+                    cloudAnchor(anchor)
                     if (success) {
+                        FileLog.d(TAG, "Successfully resolved route with id: ${route.cloudAnchorId}")
                         updateState(AppState.RESOLVE_SUCCESS)
                         clearSearchingModels()
 
@@ -633,6 +633,7 @@ class AugmentedRealityFragment : Fragment() {
                         }
                     } else {
                         updateState(AppState.RESOLVE_FAIL)
+                        FileLog.d(TAG, "Failed resolving route with id: ${route.cloudAnchorId}")
                     }
                 }
             }
@@ -644,12 +645,93 @@ class AugmentedRealityFragment : Fragment() {
             if (appState == AppState.RESOLVING) {
                 cloudAnchor?.detach()
                 withContext(Dispatchers.Main) {
+                    Log.d(TAG, "Resolve timed out")
                     updateState(AppState.RESOLVE_FAIL)
                 }
             }
         }
     }
 
+    private fun isNodeInView(node: ArNode): Boolean {
+        val nodeTranslation = nodeOnCameraProjection(node)
+
+        val ndcX = nodeTranslation[0] / nodeTranslation[3]
+        val ndcY = nodeTranslation[1] / nodeTranslation[3]
+        val ndcZ = nodeTranslation[2] / nodeTranslation[3]
+        FileLog.d("O_O", "NDC: $ndcX, $ndcY and Z is $ndcZ")
+        return !(ndcX < -1 || ndcX > 1 || ndcY < -1 || ndcY > 1 || ndcZ > 1)
+    }
+
+    private fun indicateDirectionIfNotInView(node: ArNode) {
+        val nodeTranslation = nodeOnCameraProjection(node)
+
+        val ndcX = nodeTranslation[0] / nodeTranslation[3]
+        val ndcY = nodeTranslation[1] / nodeTranslation[3]
+        val ndcZ = nodeTranslation[2] / nodeTranslation[3]
+
+        if (ndcZ > 1) { //node is behind the camera
+            if (ndcX > 0) {
+                //node is behind-left from the camera
+                showDirectionIndicator(Indicator.LEFT)
+            } else {
+                //node is behind-right from the camera
+                showDirectionIndicator(Indicator.RIGHT)
+            }
+        } else { //node is in front of the camera
+            if (ndcX > 1) {
+                showDirectionIndicator(Indicator.RIGHT)
+            } else if (ndcX < -1) {
+                showDirectionIndicator(Indicator.LEFT)
+            } else {
+                showDirectionIndicator(Indicator.NONE)
+            }
+        }
+    }
+
+    private fun showDirectionIndicator(direction: Indicator) {
+        when (direction) {
+            Indicator.LEFT -> {
+                binding.arIndicatorLeft.visibility = View.VISIBLE
+                binding.arIndicatorRight.visibility = View.INVISIBLE
+            }
+            Indicator.RIGHT -> {
+                binding.arIndicatorLeft.visibility = View.INVISIBLE
+                binding.arIndicatorRight.visibility = View.VISIBLE
+            }
+            Indicator.NONE -> {
+                binding.arIndicatorLeft.visibility = View.INVISIBLE
+                binding.arIndicatorRight.visibility = View.INVISIBLE
+            }
+        }
+    }
+
+    private fun nodeOnCameraProjection(node: ArNode): FloatArray {
+        sceneView.currentFrame?.camera?.let { camera ->
+            val viewProjectionMatrix = FloatArray(16)
+            camera.getProjectionMatrix(viewProjectionMatrix, 0, 0.01f, 30f)
+
+            val viewMatrix = FloatArray(16)
+            camera.getViewMatrix(viewMatrix, 0)
+
+            val matrix = FloatArray(16)
+            Matrix.translateM(matrix, 0, node.position.x, node.position.y, node.position.z)
+
+            Matrix.multiplyMM(matrix, 0, viewProjectionMatrix, 0, viewMatrix, 0);
+
+            val nodeTranslation = FloatArray(4)
+            nodeTranslation[0] = node.position.x
+            nodeTranslation[1] = node.position.y
+            nodeTranslation[2] = node.position.z
+            nodeTranslation[3] = 1f
+
+            val nodeTranslationNDC = FloatArray(4)
+            Matrix.multiplyMV(nodeTranslationNDC, 0, matrix, 0, nodeTranslation, 0)
+            return nodeTranslationNDC
+        } ?: run {
+            FileLog.w("O_O", "No camera available for isInView check")
+            return FloatArray(4)
+        }
+    }
 
     private fun distanceOfCameraToNode(node: ArNode): Float {
         val vectorUp = node.pose!!.yDirection
@@ -863,19 +945,18 @@ class AugmentedRealityFragment : Fragment() {
 //        modelMap[ANCHOR_PREVIEW] = GLBLoader.loadModel(requireContext(), lifecycle, "models/anchor_preview.glb")
 //        modelMap[ANCHOR_PREVIEW_ARROW] = GLBLoader.loadModel(requireContext(), lifecycle, "models/preview_arrow_facing_down.glb")
 //        modelMap[TARGET] = GLBLoader.loadModel(requireContext(), lifecycle, "models/target.glb")
-//        modelMap[AXIS] = GLBLoader.loadModel(requireContext(), lifecycle, "models/axis.glb")
 //        modelMap[ANCHOR_SEARCH_ARROW] = GLBLoader.loadModel(requireContext(), lifecycle, "models/small_preview_arrow_blue.glb")
 
         modelMap[ARROW_FORWARD] = ModelRenderable.builder()
-            .setSource(context, parse("models/arrow_fw.glb"))
+            .setSource(context, parse("models/arrow_forward.glb"))
             .setIsFilamentGltf(true)
             .await(lifecycle)
         modelMap[ARROW_LEFT] = ModelRenderable.builder()
-            .setSource(context, parse("models/arrow_lf.glb"))
+            .setSource(context, parse("models/arrow_left.glb"))
             .setIsFilamentGltf(true)
             .await(lifecycle)
         modelMap[ARROW_RIGHT] = ModelRenderable.builder()
-            .setSource(context, parse("models/arrow_rd.glb"))
+            .setSource(context, parse("models/arrow_right.glb"))
             .setIsFilamentGltf(true)
             .await(lifecycle)
         modelMap[CUBE] = ModelRenderable.builder()
@@ -896,10 +977,6 @@ class AugmentedRealityFragment : Fragment() {
             .await(lifecycle)
         modelMap[TARGET] = ModelRenderable.builder()
             .setSource(context, parse("models/target.glb"))
-            .setIsFilamentGltf(true)
-            .await(lifecycle)
-        modelMap[AXIS] = ModelRenderable.builder()
-            .setSource(context, parse("models/axis.glb"))
             .setIsFilamentGltf(true)
             .await(lifecycle)
         modelMap[ANCHOR_SEARCH_ARROW] = ModelRenderable.builder()
@@ -942,7 +1019,11 @@ class AugmentedRealityFragment : Fragment() {
         earthNode = null
         previewArrow?.parent = null
         previewArrow = null
-        placementNode?.isVisible = false
+        placementNode?.destroy()
+        placementNode = ArModelNode(placementMode = PlacementMode.PLANE_HORIZONTAL).apply {
+            parent = sceneView
+            isVisible = false
+        }
         anchorCircle.destroy()
         anchorCircle = AnchorHostingPoint(requireContext(), Filament.engine, sceneView.renderer.filamentScene)
         anchorCircle.enabled = true
@@ -989,6 +1070,10 @@ class AugmentedRealityFragment : Fragment() {
             AppState.HOST_SUCCESS -> {
                 binding.arButtonUndo.visibility = View.VISIBLE
                 binding.arButtonClear.visibility = View.VISIBLE
+                placementNode?.destroy()
+                placementNode = ArModelNode(placementMode = PlacementMode.PLANE_HORIZONTAL).apply {
+                    parent = sceneView
+                }
                 "Successfully hosted as cloud anchor \n \n" +
                         "Is the Anchor is perfectly flat on the surface? \n" +
                         "\t No -> Press clear and replace it \n" +
@@ -1001,9 +1086,13 @@ class AugmentedRealityFragment : Fragment() {
             }
             AppState.PLACE_OBJECT -> {
                 updateExtendedFab("PLACE")
-                placementNode?.setModel(modelMap[selectedModel])
-                placementNode?.modelScale = Scale(scale, scale, scale)
-                placementNode?.isVisible = true
+                placementNode?.destroy()
+                placementNode = ArModelNode(placementMode = PlacementMode.PLANE_HORIZONTAL).apply {
+                    parent = sceneView
+                    setModel(modelMap[selectedModel])
+                    isVisible = true
+                    modelScale = Scale(this@AugmentedRealityFragment.scale, this@AugmentedRealityFragment.scale, this@AugmentedRealityFragment.scale)
+                }
                 binding.arExtendedFab.isEnabled = true
                 binding.arModelSizeToggle.visibility = View.VISIBLE
                 "Place the arrow at the desired location \n \n" +
@@ -1015,9 +1104,13 @@ class AugmentedRealityFragment : Fragment() {
             AppState.PLACE_TARGET -> {
                 updateExtendedFab("PLACE")
                 binding.arExtendedFab.isEnabled = true
-                placementNode?.setModel(modelMap[selectedModel])
-                placementNode?.modelScale = Scale(scale, scale, scale)
-                placementNode?.isVisible = true
+                placementNode?.destroy()
+                placementNode = ArModelNode(placementMode = PlacementMode.PLANE_HORIZONTAL).apply {
+                    parent = sceneView
+                    setModel(modelMap[selectedModel])
+                    isVisible = true
+                    modelScale = Scale(this@AugmentedRealityFragment.scale, this@AugmentedRealityFragment.scale, this@AugmentedRealityFragment.scale)
+                }
                 binding.arModelSizeToggle.visibility = View.VISIBLE
                 "Place the destination marker at the desired location \n \n" +
                         "This will be the last marker to place"
