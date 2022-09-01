@@ -427,7 +427,7 @@ class AugmentedRealityFragment : Fragment() {
         }
     }
 
-    private fun arToJsonString(): String {
+    private suspend fun arToJsonString(): String {
         var result = ""
         cloudAnchorId?.let { id ->
             result = Json.encodeToString(ArRoute(id, pointList))
@@ -515,10 +515,12 @@ class AugmentedRealityFragment : Fragment() {
     }
 
     private fun onHost() {
+        binding.arProgressBar.visibility = View.VISIBLE
         updateState(AppState.HOSTING)
         anchorNode?.let { anchorNode ->
             anchorNode.hostCloudAnchor(365) { anchor: Anchor, success: Boolean -> //TODO onHostedAnchorAvailable checks for success as well, seems unnecessary
                 cloudAnchor(anchor)
+                binding.arProgressBar.visibility = View.GONE
                 if (success) {
                     cloudAnchorId = anchor.cloudAnchorId
                     updateState(AppState.HOST_SUCCESS)
@@ -535,33 +537,46 @@ class AugmentedRealityFragment : Fragment() {
     }
 
     private fun onConfirm() {
-        val json = arToJsonString()
-        viewModel.arDataString = json
-        viewModel.currentPlace?.let {
-            it.ardata = json
-            it.lat = geoLat
-            it.lng = geoLng
-            it.heading = geoHdg
-            it.alt = geoAlt
-        }
-        when (viewModel.navState) {
-            MainViewModel.NavState.MAPS_TO_AR_NEW -> {
-                viewModel.geoLat = geoLat
-                viewModel.geoLng = geoLng
-                viewModel.geoAlt = geoAlt
-                viewModel.geoHdg = geoHdg
-                findNavController().navigate(AugmentedRealityFragmentDirections.actionArFragmentToCreateFragment())
-            }
-            MainViewModel.NavState.MAPS_TO_EDIT -> {
+        binding.arProgressBar.visibility = View.VISIBLE
+        binding.arExtendedFab.isEnabled = false
+        lifecycleScope.launch {
+            val job = launch {
+                val json = arToJsonString()
+                viewModel.arDataString = json
                 viewModel.currentPlace?.let {
+                    it.ardata = json
                     it.lat = geoLat
                     it.lng = geoLng
                     it.heading = geoHdg
                     it.alt = geoAlt
-                    findNavController().navigate(AugmentedRealityFragmentDirections.actionArFragmentToCreateFragment())
-                } ?: FileLog.e(TAG, "Navstate is edit, but currentplace is null in ARFragment ")
+                }
             }
-            else -> FileLog.e(TAG, "Wrong Navstate onClick Confirm is ${viewModel.navState}")
+            job.join()
+            when (viewModel.navState) {
+                MainViewModel.NavState.MAPS_TO_AR_NEW -> {
+                    viewModel.geoLat = geoLat
+                    viewModel.geoLng = geoLng
+                    viewModel.geoAlt = geoAlt
+                    viewModel.geoHdg = geoHdg
+                    binding.arProgressBar.visibility = View.GONE
+                    findNavController().navigate(AugmentedRealityFragmentDirections.actionArFragmentToCreateFragment())
+                }
+                MainViewModel.NavState.MAPS_TO_EDIT -> {
+                    viewModel.currentPlace?.let {
+                        it.lat = geoLat
+                        it.lng = geoLng
+                        it.heading = geoHdg
+                        it.alt = geoAlt
+                        binding.arProgressBar.visibility = View.GONE
+                        findNavController().navigate(AugmentedRealityFragmentDirections.actionArFragmentToCreateFragment())
+                    } ?: FileLog.e(TAG, "Navstate is edit, but currentplace is null in ARFragment ")
+                }
+                else -> {
+                    binding.arProgressBar.visibility = View.GONE
+                    binding.arExtendedFab.isEnabled = true
+                    FileLog.e(TAG, "Wrong Navstate onClick Confirm is ${viewModel.navState}")
+                }
+            }
         }
     }
 
@@ -605,11 +620,13 @@ class AugmentedRealityFragment : Fragment() {
     private fun resolveRoute(arRoute: ArRoute?) {
         arRoute?.let { route ->
             updateState(AppState.RESOLVING)
+            binding.arProgressBar.visibility = View.VISIBLE
             anchorNode = ArModelNode().also { anchorNode ->
                 anchorNode.position = Position(0f, 0f, 0f)
                 anchorNode.parent = sceneView
                 anchorNode.resolveCloudAnchor(route.cloudAnchorId) { anchor: Anchor, success: Boolean ->
                     cloudAnchor(anchor)
+                    binding.arProgressBar.visibility = View.GONE
                     if (success) {
                         FileLog.d(TAG, "Successfully resolved route with id: ${route.cloudAnchorId}")
                         updateState(AppState.RESOLVE_SUCCESS)
@@ -647,6 +664,7 @@ class AugmentedRealityFragment : Fragment() {
                 withContext(Dispatchers.Main) {
                     Log.d(TAG, "Resolve timed out")
                     updateState(AppState.RESOLVE_FAIL)
+                    binding.arProgressBar.visibility = View.GONE
                 }
             }
         }
@@ -658,7 +676,7 @@ class AugmentedRealityFragment : Fragment() {
         val ndcX = nodeTranslation[0] / nodeTranslation[3]
         val ndcY = nodeTranslation[1] / nodeTranslation[3]
         val ndcZ = nodeTranslation[2] / nodeTranslation[3]
-        FileLog.d("O_O", "NDC: $ndcX, $ndcY and Z is $ndcZ")
+
         return !(ndcX < -1 || ndcX > 1 || ndcY < -1 || ndcY > 1 || ndcZ > 1)
     }
 

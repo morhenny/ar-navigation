@@ -323,6 +323,16 @@
 
         </com.google.android.material.button.MaterialButtonToggleGroup>
 
+        <ProgressBar
+            android:id="@+id/ar_progress_bar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:indeterminate="true"
+            android:visibility="gone"
+            app:layout_constraintBottom_toTopOf="@id/ar_extended_fab"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintRight_toRightOf="parent"
+            app:layout_constraintTop_toTopOf="@id/ar_content_layout" />
 
         <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
             android:id="@+id/ar_extended_fab"
