@@ -115,6 +115,13 @@ class AugmentedRealityFragment : Fragment() {
         NONE,
     }
 
+    enum class FabState {
+        PLACE,
+        CONFIRM,
+        RESOLVE,
+        HOST,
+    }
+
     private var _binding: FragmentAugmentedRealityBinding? = null
     private val binding get() = _binding!!
 
@@ -466,15 +473,15 @@ class AugmentedRealityFragment : Fragment() {
                         if (earth.trackingState == TrackingState.TRACKING) {
                             val cameraGeospatialPose = earth.cameraGeospatialPose
                             if (IGNORE_GEO_ACC || cameraGeospatialPose.horizontalAccuracy < 5) { //TODO decide threshold for accuracy
-                                anchorNode = ArModelNode(PlacementMode.DISABLED).also {
-                                    it.parent = sceneView
-                                    it.anchor = pNode.createAnchor()
-                                    it.isVisible = false
-                                    it.setModel(modelMap[ANCHOR])
+                                updateState(AppState.WAITING_FOR_ANCHOR_CIRCLE)
+                                anchorNode = ArModelNode(PlacementMode.DISABLED).apply {
+                                    parent = sceneView
+                                    anchor = pNode.createAnchor()
+                                    isVisible = false
+                                    setModel(modelMap[ANCHOR])
                                 }
                                 startRotation = sceneView.camera.transform.rotation.y
                                 calculateLatLongOfPlacementNode(cameraGeospatialPose)
-                                updateState(AppState.WAITING_FOR_ANCHOR_CIRCLE)
                             }
                         }
                     }
@@ -519,7 +526,7 @@ class AugmentedRealityFragment : Fragment() {
         binding.arProgressBar.visibility = View.VISIBLE
         updateState(AppState.HOSTING)
         anchorNode?.let { anchorNode ->
-            anchorNode.hostCloudAnchor(365) { anchor: Anchor, success: Boolean -> //TODO onHostedAnchorAvailable checks for success as well, seems unnecessary
+            anchorNode.hostCloudAnchor(365) { anchor: Anchor, success: Boolean ->
                 cloudAnchor(anchor)
                 binding.arProgressBar.visibility = View.GONE
                 if (success) {
@@ -535,13 +542,24 @@ class AugmentedRealityFragment : Fragment() {
                 }
             }
         }
+        lifecycleScope.launch(Dispatchers.IO) {
+            delay(10000L)
+            if (appState == AppState.HOSTING) {
+                cloudAnchor?.detach()
+                withContext(Dispatchers.Main) {
+                    Log.d(TAG, "Hosting timed out")
+                    updateState(AppState.HOST_FAIL)
+                    binding.arProgressBar.visibility = View.GONE
+                }
+            }
+        }
     }
 
     private fun onConfirm() {
         binding.arProgressBar.visibility = View.VISIBLE
         binding.arExtendedFab.isEnabled = false
-        lifecycleScope.launch {
-            val job = launch {
+        lifecycleScope.launch(Dispatchers.IO) {
+            val job = launch(Dispatchers.IO) {
                 val json = arToJsonString()
                 viewModel.arDataString = json
                 viewModel.currentPlace?.let {
@@ -559,8 +577,10 @@ class AugmentedRealityFragment : Fragment() {
                     viewModel.geoLng = geoLng
                     viewModel.geoAlt = geoAlt
                     viewModel.geoHdg = geoHdg
-                    binding.arProgressBar.visibility = View.GONE
-                    findNavController().navigate(AugmentedRealityFragmentDirections.actionArFragmentToCreateFragment())
+                    withContext(Dispatchers.Main) {
+                        binding.arProgressBar.visibility = View.GONE
+                        findNavController().navigate(AugmentedRealityFragmentDirections.actionArFragmentToCreateFragment())
+                    }
                 }
                 MainViewModel.NavState.MAPS_TO_EDIT -> {
                     viewModel.currentPlace?.let {
@@ -568,8 +588,10 @@ class AugmentedRealityFragment : Fragment() {
                         it.lng = geoLng
                         it.heading = geoHdg
                         it.alt = geoAlt
-                        binding.arProgressBar.visibility = View.GONE
-                        findNavController().navigate(AugmentedRealityFragmentDirections.actionArFragmentToCreateFragment())
+                        withContext(Dispatchers.Main) {
+                            binding.arProgressBar.visibility = View.GONE
+                            findNavController().navigate(AugmentedRealityFragmentDirections.actionArFragmentToCreateFragment())
+                        }
                     } ?: FileLog.e(TAG, "Navstate is edit, but currentplace is null in ARFragment ")
                 }
                 else -> {
@@ -801,7 +823,6 @@ class AugmentedRealityFragment : Fragment() {
                     geoHdg,
                     distanceToHit.toDouble()
                 )).also {
-                    binding.arInfoText.text = it
                     FileLog.d(TAG, "PlacementNode location calculated: \n$it")
                 }
             }
@@ -1069,34 +1090,41 @@ class AugmentedRealityFragment : Fragment() {
 
             }
             AppState.PLACE_ANCHOR -> {
-                updateExtendedFab("PLACE")
-                binding.arButtonClear.visibility = View.GONE
-                binding.arButtonUndo.visibility = View.GONE
-                binding.arModelSizeToggle.visibility = View.GONE
+                updateExtendedFab(FabState.PLACE)
+                with(binding) {
+                    arExtendedFab.isEnabled = true
+                    arButtonUndo.visibility = View.GONE
+                    arButtonClear.visibility = View.GONE
+                    arModelSizeToggle.visibility = View.GONE
+                }
                 "Place the anchor at the desired location \n \n" +
                         "Make sure the VPS accuracy is good before placing!"
             }
             AppState.WAITING_FOR_ANCHOR_CIRCLE -> {
-                binding.arExtendedFab.isEnabled = false
-                //TODO potentially change text of button to host anchor
+                with(binding) {
+                    arExtendedFab.isEnabled = false
+                    arButtonUndo.visibility = View.VISIBLE
+                }
                 "Please walk around the circle and scan every side"
             }
             AppState.HOSTING -> {
+                updateExtendedFab(FabState.HOST)
                 "Anchor placed! \n \n" +
                         "Trying to host as cloud anchor... \n" +
                         "Please wait"
             }
             AppState.HOST_SUCCESS -> {
-                binding.arButtonUndo.visibility = View.VISIBLE
-                binding.arButtonClear.visibility = View.VISIBLE
+                updateExtendedFab(FabState.PLACE)
+                with(binding) {
+                    arButtonUndo.visibility = View.VISIBLE
+                    arButtonClear.visibility = View.VISIBLE
+                }
                 placementNode?.destroy()
                 placementNode = ArModelNode(placementMode = PlacementMode.PLANE_HORIZONTAL).apply {
                     parent = sceneView
                 }
                 "Successfully hosted as cloud anchor \n \n" +
-                        "Is the Anchor is perfectly flat on the surface? \n" +
-                        "\t No -> Press clear and replace it \n" +
-                        "\t Yes -> Select the next arrow model"
+                        "Press + to select a model and place it"
             }
             AppState.HOST_FAIL -> {
                 "Hosting the cloud anchor failed \n \n" +
@@ -1104,14 +1132,15 @@ class AugmentedRealityFragment : Fragment() {
                         "then try placing again"
             }
             AppState.PLACE_OBJECT -> {
-                updateExtendedFab("PLACE")
+                updateExtendedFab(FabState.PLACE)
                 placementNode?.destroy()
                 placementNode = ArModelNode(placementMode = PlacementMode.PLANE_HORIZONTAL).apply {
+                    isVisible = false
                     parent = sceneView
                     setModel(modelMap[selectedModel])
-                    isVisible = true
                     modelScale = Scale(this@AugmentedRealityFragment.scale, this@AugmentedRealityFragment.scale, this@AugmentedRealityFragment.scale)
                 }
+                placementNode?.isVisible = true
                 binding.arExtendedFab.isEnabled = true
                 binding.arModelSizeToggle.visibility = View.VISIBLE
                 "Place the arrow at the desired location \n \n" +
@@ -1121,7 +1150,7 @@ class AugmentedRealityFragment : Fragment() {
                 "Select the arrow type to place next, by clicking on the Button in the bottom-right"
             }
             AppState.PLACE_TARGET -> {
-                updateExtendedFab("PLACE")
+                updateExtendedFab(FabState.PLACE)
                 binding.arExtendedFab.isEnabled = true
                 placementNode?.destroy()
                 placementNode = ArModelNode(placementMode = PlacementMode.PLANE_HORIZONTAL).apply {
@@ -1137,12 +1166,12 @@ class AugmentedRealityFragment : Fragment() {
             AppState.TARGET_PLACED -> {
                 binding.arModelSizeToggle.visibility = View.GONE
                 placementNode?.isVisible = false
-                updateExtendedFab("CONFIRM")
+                updateExtendedFab(FabState.CONFIRM)
                 "You have successfully created a full route\n \n" +
                         "Press confirm if everything is ready"
             }
             AppState.RESOLVE_ABLE -> {
-                updateExtendedFab("RESOLVE")
+                updateExtendedFab(FabState.RESOLVE)
                 binding.arButtonClear.visibility = View.GONE
                 binding.arButtonUndo.visibility = View.GONE
                 binding.arModelSizeToggle.visibility = View.GONE
@@ -1172,7 +1201,7 @@ class AugmentedRealityFragment : Fragment() {
                         "Move your phone around the anchor area and then try to resolve again"
             }
             AppState.SEARCHING -> {
-                updateExtendedFab("RESOLVE")
+                updateExtendedFab(FabState.RESOLVE)
                 binding.arButtonClear.visibility = View.GONE
                 binding.arButtonUndo.visibility = View.GONE
                 binding.arModelSizeToggle.visibility = View.GONE
@@ -1181,19 +1210,23 @@ class AugmentedRealityFragment : Fragment() {
         }
     }
 
-    private fun updateExtendedFab(type: String) {
+    private fun updateExtendedFab(type: FabState) {
         when (type) {
-            "PLACE" -> {
+            FabState.PLACE -> {
                 binding.arExtendedFab.text = "PLACE"
                 binding.arExtendedFab.icon = requireActivity().getDrawable(R.drawable.ic_place_item_24)
             }
-            "CONFIRM" -> {
+            FabState.CONFIRM -> {
                 binding.arExtendedFab.text = "CONFIRM"
                 binding.arExtendedFab.icon = requireActivity().getDrawable(R.drawable.ic_baseline_cloud_upload_24)
             }
-            "RESOLVE" -> {
+            FabState.RESOLVE -> {
                 binding.arExtendedFab.text = "RESOLVE"
                 binding.arExtendedFab.icon = requireActivity().getDrawable(R.drawable.ic_baseline_cloud_download_24)
+            }
+            FabState.HOST -> {
+                binding.arExtendedFab.text = "HOSTING"
+                binding.arExtendedFab.icon = requireActivity().getDrawable(R.drawable.ic_baseline_cloud_upload_24)
             }
         }
     }

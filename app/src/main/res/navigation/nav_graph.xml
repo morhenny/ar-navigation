@@ -9,8 +9,7 @@
         android:label="MapsFragment">
         <action
             android:id="@+id/action_mapsFragment_to_arFragment"
-            app:destination="@id/arFragment"
-/>
+            app:destination="@id/arFragment" />
         <action
             android:id="@+id/action_mapsFragment_to_createFragment"
             app:destination="@id/createFragment" />
@@ -23,7 +22,7 @@
             android:id="@+id/action_arFragment_to_createFragment"
             app:destination="@id/createFragment"
             app:popUpTo="@id/arFragment"
-            app:popUpToInclusive="true"/>
+            app:popUpToInclusive="true" />
     </fragment>
     <fragment
         android:id="@+id/createFragment"
@@ -35,6 +34,8 @@
             app:popUpTo="@id/arFragment" />
         <action
             android:id="@+id/action_createFragment_to_arFragment"
-            app:destination="@id/arFragment"/>
+            app:destination="@id/arFragment"
+            app:popUpTo="@id/createFragment"
+            app:popUpToInclusive="true" />
     </fragment>
 </navigation>
