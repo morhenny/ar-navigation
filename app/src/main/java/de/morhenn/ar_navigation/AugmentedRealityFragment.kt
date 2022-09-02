@@ -17,6 +17,7 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.ar.core.*
 import com.google.ar.sceneform.rendering.ModelRenderable
 import com.google.ar.sceneform.rendering.Renderable
+import com.google.ar.sceneform.rendering.ResourceManager
 import com.google.ar.sceneform.rendering.ViewRenderable
 import de.morhenn.ar_navigation.AugmentedRealityFragment.ModelName.*
 import de.morhenn.ar_navigation.databinding.FragmentAugmentedRealityBinding
@@ -1249,6 +1250,10 @@ class AugmentedRealityFragment : Fragment() {
 
     override fun onDestroy() {
         FileLog.d("O_O", "onDestroy")
+
+        //TODO this is only needed in 0.6.0, since it is in sceneView for newer versions
+        ResourceManager.getInstance().destroyAllResources()
+
         sceneView.onDestroy(this)
         _binding = null
         super.onDestroy()

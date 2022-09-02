@@ -329,10 +329,10 @@
             android:layout_height="wrap_content"
             android:indeterminate="true"
             android:visibility="gone"
-            app:layout_constraintBottom_toTopOf="@id/ar_extended_fab"
-            app:layout_constraintLeft_toLeftOf="parent"
-            app:layout_constraintRight_toRightOf="parent"
-            app:layout_constraintTop_toTopOf="@id/ar_content_layout" />
+            app:layout_constraintTop_toTopOf="@id/ar_extended_fab"
+            app:layout_constraintLeft_toLeftOf="@id/ar_extended_fab"
+            app:layout_constraintBottom_toBottomOf="@id/ar_extended_fab"
+             />
 
         <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
             android:id="@+id/ar_extended_fab"
