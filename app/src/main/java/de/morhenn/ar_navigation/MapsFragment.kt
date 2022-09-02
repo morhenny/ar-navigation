@@ -36,7 +36,7 @@ import de.morhenn.ar_navigation.databinding.InfoWindowBinding
 import de.morhenn.ar_navigation.util.FileLog
 import de.morhenn.ar_navigation.util.Utils
 
-class MapsFragment : Fragment(), OnMapReadyCallback, SensorEventListener {
+class MapsFragment : Fragment(), OnMapReadyCallback {
 
     private val MAX_DISTANCE_TO_START = 500 //Distance in m between marker location and GPS position, to be able to start AR-Navigation
 
@@ -57,7 +57,6 @@ class MapsFragment : Fragment(), OnMapReadyCallback, SensorEventListener {
     private lateinit var requestPermissionLauncher: ActivityResultLauncher<String>
 
     private var centered = true
-    private var sensorAccuracy = 0
 
     private lateinit var map: GoogleMap
     private lateinit var sensorManager: SensorManager
@@ -109,15 +108,6 @@ class MapsFragment : Fragment(), OnMapReadyCallback, SensorEventListener {
                 viewModel.navState = MainViewModel.NavState.MAPS_TO_AR_NEW
                 findNavController().navigate(MapsFragmentDirections.actionMapsFragmentToArFragment())
             }
-        }
-        createFab.setOnLongClickListener { //TODO debug only
-            val rotationMatrix = FloatArray(9)
-            SensorManager.getRotationMatrix(rotationMatrix, null, accelerometerReading, magnetometerReading)
-            val orientationAngles = FloatArray(3)
-            SensorManager.getOrientation(rotationMatrix, orientationAngles)
-            val degreeToNorth = Math.toDegrees((orientationAngles[0].toDouble())) //Angle to true north from device
-            FileLog.d("O_O", "degrees: $degreeToNorth")
-            true
         }
         routeFab = binding.mapRouteFab
         routeFab.setOnClickListener {
@@ -227,47 +217,6 @@ class MapsFragment : Fragment(), OnMapReadyCallback, SensorEventListener {
         selectedMarker = null
     }
 
-    override fun onResume() {
-        super.onResume()
-
-        sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)?.also { magneticField ->
-            sensorManager.registerListener(
-                this,
-                magneticField,
-                SensorManager.SENSOR_DELAY_NORMAL,
-                SensorManager.SENSOR_DELAY_UI
-            )
-        }
-        sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)?.also { accelerometer ->
-            sensorManager.registerListener(
-                this,
-                accelerometer,
-                SensorManager.SENSOR_DELAY_NORMAL,
-                SensorManager.SENSOR_DELAY_UI
-            )
-        }
-    }
-
-    override fun onPause() {
-        super.onPause()
-        sensorManager.unregisterListener(this)
-    }
-
-    override fun onSensorChanged(event: SensorEvent?) {
-        event?.let {
-            if (it.sensor.type == Sensor.TYPE_ACCELEROMETER) {
-                System.arraycopy(it.values, 0, accelerometerReading, 0, accelerometerReading.size)
-            } else if (it.sensor.type == Sensor.TYPE_MAGNETIC_FIELD) {
-                System.arraycopy(it.values, 0, magnetometerReading, 0, magnetometerReading.size)
-            }
-        }
-    }
-
-    override fun onAccuracyChanged(sensor: Sensor?, acc: Int) {
-        sensorAccuracy = acc
-        binding.mapsSensorAccuracyReading.text = sensorAccuracy.toString()
-    }
-
     private fun startNavigationIntentToMarker(marker: Marker) {
         val coords = "" + marker.position.latitude + ", " + marker.position.longitude
         val intentUri = Uri.parse("google.navigation:q=$coords&mode=w")
@@ -292,51 +241,5 @@ class MapsFragment : Fragment(), OnMapReadyCallback, SensorEventListener {
                 }
             }
         }
-    }
-
-    @SuppressLint("MissingPermission")
-    private fun onRouteClick(view: View) {
-        locationProvider?.let {
-            it.lastLocation.addOnSuccessListener { location ->
-                selectedMarker?.let { marker ->
-                    val markerLocation = Location("")
-                    markerLocation.latitude = marker.position.latitude
-                    markerLocation.longitude = marker.position.longitude
-                    val distance = location.distanceTo(markerLocation)
-                    val bearingToAnchor = location.bearingTo(markerLocation)
-                    if (distance >= MAX_DISTANCE_TO_START) {
-                        startNavigationIntentToMarker(selectedMarker!!)
-                    } else {
-                        onLocationConfirmationDialog(view, distance)
-                    }
-                }
-            }
-        }
-    }
-
-    private fun onLocationConfirmationDialog(view: View, distance: Float) {
-
-        val builder = AlertDialog.Builder(view.context)
-        builder.setTitle(getString(R.string.route_dialog_title))
-        builder.setMessage("You already are only $distance meters away from the starting position, ready to start AR-Navigation? If not use Google Maps to get closer")
-        builder.setPositiveButton("Start AR") { _, _ ->
-            //calculate direction and distance from gps to marker
-            val rotationMatrix = FloatArray(9)
-            SensorManager.getRotationMatrix(rotationMatrix, null, accelerometerReading, magnetometerReading)
-            val orientationAngles = FloatArray(3)
-            SensorManager.getOrientation(rotationMatrix, orientationAngles)
-            val degreeToNorth = Math.toDegrees((orientationAngles[0].toDouble())) //Angle to true north from device
-
-            viewModel.navState = MainViewModel.NavState.MAPS_TO_AR_NAV
-            findNavController().navigate(MapsFragmentDirections.actionMapsFragmentToArFragment())
-        }
-        builder.setNegativeButton("Google Maps") { _, _ ->
-            viewModel.clearCurrentPlace()
-            startNavigationIntentToMarker(selectedMarker!!)
-        }
-        builder.setNeutralButton("Cancel") { _, _ ->
-        }
-
-        builder.show()
     }
 }
