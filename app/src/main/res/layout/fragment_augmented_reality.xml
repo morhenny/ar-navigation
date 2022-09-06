@@ -184,7 +184,6 @@
         android:background="@drawable/rounded_corners"
         android:elevation="2dp"
         android:paddingVertical="8dp"
-        android:text="Here, all the toasts and status will be shown"
         android:textAlignment="center"
         android:textColor="@color/white"
         android:textSize="14sp"
@@ -257,7 +256,7 @@
                 android:id="@+id/ar_button_undo"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="UNDO"
+                android:text="@string/btn_undo"
                 android:textColor="@color/white"
                 android:textSize="11sp"
                 app:icon="@drawable/ic_baseline_undo_24"
@@ -267,7 +266,7 @@
                 android:id="@+id/ar_button_clear"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="CLEAR"
+                android:text="@string/btn_clear"
                 android:textColor="@color/white"
                 android:textSize="11sp"
                 app:icon="@drawable/ic_baseline_delete_24"
@@ -328,11 +327,11 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:indeterminate="true"
+            android:indeterminateTint="@color/white"
             android:visibility="gone"
-            app:layout_constraintTop_toTopOf="@id/ar_extended_fab"
-            app:layout_constraintLeft_toLeftOf="@id/ar_extended_fab"
             app:layout_constraintBottom_toBottomOf="@id/ar_extended_fab"
-             />
+            app:layout_constraintLeft_toLeftOf="@id/ar_extended_fab"
+            app:layout_constraintTop_toTopOf="@id/ar_extended_fab" />
 
         <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
             android:id="@+id/ar_extended_fab"

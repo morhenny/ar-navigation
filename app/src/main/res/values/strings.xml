@@ -3,6 +3,7 @@
     <string name="fab_add_descr">FAB to add a place</string>
     <string name="fab_route_descr">FAB to launch maps route</string>
     <string name="fab_my_location_descr">"FAB Find my location "</string>
+    <string name="fab_search_desrc">FAB to preview anchors in AR</string>
     <string name="input_name_hint">Name:</string>
     <string name="input_description_hint">Description:</string>
     <string name="input_lat_hint">Latitude:</string>
@@ -28,4 +29,10 @@
     <string name="button_resolve">RESOLVE</string>
     <string name="button_place">PLACE</string>
     <string name="button_confirm">CONFIRM</string>
+    <string name="btn_clear">CLEAR</string>
+    <string name="btn_undo">UNDO</string>
+    <string name="btn_place">PLACE</string>
+    <string name="btn_confirm">CONFIRM</string>
+    <string name="btn_resolve">RESOLVE</string>
+    <string name="btn_hosting">HOSTING</string>
 </resources>

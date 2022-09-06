@@ -32,7 +32,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:backgroundTint="@color/white"
-            android:contentDescription="FAB to preview anchors in AR"
+            android:contentDescription="@string/fab_search_desrc"
             android:elevation="0dp"
             android:src="@drawable/ic_baseline_view_in_ar_24"
             map:borderWidth="0dp" />

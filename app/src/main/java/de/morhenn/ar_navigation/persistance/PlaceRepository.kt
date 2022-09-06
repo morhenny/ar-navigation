@@ -26,7 +26,7 @@ class PlaceRepository {
     companion object {
         private lateinit var INSTANCE: PlaceRepository
         private const val CONNECTION_RETRY_DELAY = 10000L
-        private const val CONNECTION_RETRY_MAX_ATTEMPTS = 5
+        private const val CONNECTION_RETRY_MAX_ATTEMPTS = 10
 
         fun init() {
             if (!::INSTANCE.isInitialized) {

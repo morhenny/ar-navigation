@@ -1,6 +1,7 @@
 package de.morhenn.ar_navigation.util
 
 import com.google.android.gms.maps.model.LatLng
+import io.github.sceneview.math.Position
 
 object GeoUtils {
 
@@ -47,5 +48,12 @@ object GeoUtils {
         val a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) * Math.sin(dLon / 2)
         val c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
         return earthRadius * c * 1000
+    }
+
+    fun distanceBetweenTwo3dCoordinates(worldPos1: Position, worldPos2: Position): Float {
+        val x = worldPos1.x - worldPos2.x
+        val y = worldPos1.y - worldPos2.y
+        val z = worldPos1.z - worldPos2.z
+        return Math.sqrt((x * x + y * y + z * z).toDouble()).toFloat()
     }
 }

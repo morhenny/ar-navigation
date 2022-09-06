@@ -1,8 +1,5 @@
 package de.morhenn.ar_navigation
 
-import androidx.appcompat.app.ActionBar
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.asLiveData
 import com.google.android.gms.maps.model.LatLng
@@ -11,7 +8,6 @@ import de.morhenn.ar_navigation.persistance.AppDatabase
 import de.morhenn.ar_navigation.persistance.NewPlace
 import de.morhenn.ar_navigation.persistance.Place
 import de.morhenn.ar_navigation.persistance.PlaceRepository
-import de.morhenn.ar_navigation.util.SimpleEvent
 
 class MainViewModel : ViewModel() {
 
@@ -28,31 +24,21 @@ class MainViewModel : ViewModel() {
     var navState = NavState.NONE
 
     private val db: AppDatabase = AppDatabase.getInstance()
-    private val placeDao = db.placeDao()
     private val placeRepository = PlaceRepository.getInstance()
     var currentPlace: Place? = null
     var arDataString: String = ""
+
+    private var lastLatLng: LatLng? = null
 
     var geoLat = 0.0
     var geoLng = 0.0
     var geoAlt = 0.0
     var geoHdg = 0.0
 
-    private val _openEdit = MutableLiveData<SimpleEvent>()
-    val openEdit: LiveData<SimpleEvent>
-        get() = _openEdit
-
-
     val places = placeRepository.getPlaces().asLiveData()
     val placesMap = HashMap<Marker, Place>()
 
     var placesInRadius = placeRepository.getPlacesAroundLocation(0.0, 0.0, 1.0).asLiveData()
-
-    fun onClickMarker(marker: Marker) {
-        placesMap[marker]?.let {
-            placeRepository.updatePlace(it)
-        }
-    }
 
     fun uploadPlace(place: NewPlace) {
         placeRepository.newPlace(place)
@@ -88,7 +74,14 @@ class MainViewModel : ViewModel() {
     }
 
     fun fetchPlacesAroundLocation(latLng: LatLng, searchRadius: Double) {
+        lastLatLng = latLng
         placesInRadius = placeRepository.getPlacesAroundLocation(latLng.latitude, latLng.longitude, searchRadius).asLiveData()
+    }
+
+    fun fetchPlacesAroundLastLocation(searchRadius: Double) {
+        lastLatLng?.let {
+            placesInRadius = placeRepository.getPlacesAroundLocation(it.latitude, it.longitude, searchRadius).asLiveData()
+        }
     }
 
 }

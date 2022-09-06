@@ -34,8 +34,7 @@ class CreateFragment : Fragment(), OnMapReadyCallback {
     private val viewModel: MainViewModel by navGraphViewModels(R.id.nav_graph_xml)
 
     private var locationProvider: FusedLocationProviderClient? = null
-    private lateinit var map: GoogleMap
-    private lateinit var marker: Marker
+    private var map: GoogleMap? = null
 
     private var editUID = ""
 
@@ -105,7 +104,7 @@ class CreateFragment : Fragment(), OnMapReadyCallback {
                     inputHdg.setText(viewModel.geoHdg.toString())
                 }
             }
-            else -> FileLog.e("O_O", "Wrong Navstate in CreateFragments onCreate")
+            else -> FileLog.e("O_O", "Wrong NavState in CreateFragments onCreate")
         }
 
         if (viewModel.arDataString.isNotBlank()) {
@@ -176,21 +175,22 @@ class CreateFragment : Fragment(), OnMapReadyCallback {
 
     @SuppressLint("MissingPermission")
     override fun onMapReady(googleMap: GoogleMap) {
-        map = googleMap
-        map.uiSettings.isMapToolbarEnabled = false
-        map.uiSettings.isCompassEnabled = true
-        map.isMyLocationEnabled = true
-        map.mapType = GoogleMap.MAP_TYPE_NORMAL
+        map = googleMap.apply {
+            uiSettings.isMapToolbarEnabled = false
+            uiSettings.isCompassEnabled = true
+            isMyLocationEnabled = true
+            mapType = GoogleMap.MAP_TYPE_NORMAL
+            isIndoorEnabled = true
+        }
         val icon = BitmapDescriptorFactory.fromResource(R.drawable.ic_push_pin)
 
         if (binding.inputLat.text.toString().isNotBlank() && binding.inputLng.text.toString().isNotBlank()) { //If an anchor location is provided, display it as a marker on the map and center around it
             val latLng = LatLng(binding.inputLat.text.toString().toDouble(), binding.inputLng.text.toString().toDouble())
-            map.addMarker(MarkerOptions().position(latLng).title(getString(R.string.select_position_title)).icon(icon))?.let { that -> marker = that }
-            marker.showInfoWindow()
+            map?.addMarker(MarkerOptions().position(latLng).title(getString(R.string.select_position_title)).icon(icon))?.showInfoWindow()
             val builder = CameraPosition.builder()
                 .zoom(18f)
                 .target(latLng)
-            map.animateCamera(CameraUpdateFactory.newCameraPosition(builder.build()))
+            map?.animateCamera(CameraUpdateFactory.newCameraPosition(builder.build()))
 
             try {
                 val arRoute = Json.decodeFromString<ArRoute>(viewModel.arDataString)
@@ -209,12 +209,12 @@ class CreateFragment : Fragment(), OnMapReadyCallback {
                 }
                 arRoute.pointsList.forEach {
                     val pointLatLng = GeoUtils.getLatLngByLocalCoordinateOffset(lat, lng, heading, it.position.x, it.position.z)
-                    val polyline1 = map.addPolyline(PolylineOptions()
+                    val polyline1 = map?.addPolyline(PolylineOptions()
                         .clickable(false)
                         .add(lastPoint)
                         .add(pointLatLng))
                     if (it.modelName == AugmentedRealityFragment.ModelName.TARGET) {
-                        polyline1.color = Color.RED
+                        polyline1?.color = Color.RED
                     }
                     lastPoint = pointLatLng
                 }
@@ -228,7 +228,7 @@ class CreateFragment : Fragment(), OnMapReadyCallback {
                     FileLog.d("O_O", "Used new location in create")
                     val latLng = LatLng(location.latitude, location.longitude)
                     val builder = CameraPosition.builder().zoom(18f).target(latLng)
-                    map.animateCamera(CameraUpdateFactory.newCameraPosition(builder.build()))
+                    map?.animateCamera(CameraUpdateFactory.newCameraPosition(builder.build()))
                 }
             }
         }
@@ -251,11 +251,18 @@ class CreateFragment : Fragment(), OnMapReadyCallback {
         return inputError
     }
 
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
+        map?.clear()
+        map = null
+        locationProvider = null
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         viewModel.currentPlace = null
         viewModel.arDataString = ""
-        _binding = null
     }
 
 }
