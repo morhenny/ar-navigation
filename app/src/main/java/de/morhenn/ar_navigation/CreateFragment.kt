@@ -40,9 +40,6 @@ class CreateFragment : Fragment(), OnMapReadyCallback {
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentCreateBinding.inflate(inflater, container, false)
-//        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner) {
-//            findNavController().navigate(CreateFragmentDirections.actionCreateFragmentToMapsFragment())
-//        }
         return binding.root
     }
 
@@ -66,9 +63,7 @@ class CreateFragment : Fragment(), OnMapReadyCallback {
                         inputHdg.setText(it.heading.toString())
                         inputDescription.setText(it.description)
                         inputAuthor.setText(it.author)
-                        buttonInputArdata.text = getString(R.string.button_edit_ar_data)
                         buttonTryArRoute.visibility = View.VISIBLE
-                        checkHasAsRoute.setImageResource(R.drawable.ic_baseline_check_box_48)
                     }
                 }
             }
@@ -85,9 +80,7 @@ class CreateFragment : Fragment(), OnMapReadyCallback {
                         inputHdg.setText(it.heading.toString())
                         inputDescription.setText(it.description)
                         inputAuthor.setText(it.author)
-                        buttonInputArdata.text = getString(R.string.button_edit_ar_data)
                         buttonTryArRoute.visibility = View.VISIBLE
-                        checkHasAsRoute.setImageResource(R.drawable.ic_baseline_check_box_48)
                     }
                 }
 
@@ -95,6 +88,7 @@ class CreateFragment : Fragment(), OnMapReadyCallback {
             MainViewModel.NavState.MAPS_TO_AR_NEW -> {
                 with(binding) {
                     buttonCreate.text = getString(R.string.button_upload_place)
+                    buttonInputArdata.visibility = View.VISIBLE
                     buttonTryArRoute.visibility = View.GONE
                     buttonDelete.visibility = View.GONE
                     binding.buttonInputArdata.text = getString(R.string.button_cancel_and_redo_ar)
@@ -106,10 +100,6 @@ class CreateFragment : Fragment(), OnMapReadyCallback {
             }
             else -> FileLog.e("O_O", "Wrong NavState in CreateFragments onCreate")
         }
-
-        if (viewModel.arDataString.isNotBlank()) {
-            binding.checkHasAsRoute.setImageResource(R.drawable.ic_baseline_check_box_48)
-        }
         binding.buttonInputArdata.setOnClickListener {
             if (viewModel.arDataString.isNotBlank()) {
                 viewModel.arDataString = ""
@@ -120,6 +110,9 @@ class CreateFragment : Fragment(), OnMapReadyCallback {
         }
         binding.buttonTryArRoute.setOnClickListener {
             viewModel.navState = MainViewModel.NavState.CREATE_TO_AR_TO_TRY
+            editPlace?.let {
+                viewModel.currentPlace = it
+            }
             findNavController().navigate(CreateFragmentDirections.actionCreateFragmentToArFragment())
         }
 
@@ -258,11 +251,4 @@ class CreateFragment : Fragment(), OnMapReadyCallback {
         map = null
         locationProvider = null
     }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        viewModel.currentPlace = null
-        viewModel.arDataString = ""
-    }
-
 }

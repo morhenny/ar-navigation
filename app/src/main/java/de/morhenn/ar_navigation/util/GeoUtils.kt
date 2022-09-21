@@ -2,6 +2,7 @@ package de.morhenn.ar_navigation.util
 
 import com.google.android.gms.maps.model.LatLng
 import io.github.sceneview.math.Position
+import kotlin.math.*
 
 object GeoUtils {
 
@@ -15,10 +16,10 @@ object GeoUtils {
 
         val distanceToRadius = distanceKm / earthRadius
 
-        val newLatR = Math.asin(Math.sin(latR) * Math.cos(distanceToRadius) +
-                Math.cos(latR) * Math.sin(distanceToRadius) * Math.cos(bearingR))
-        val newLonR = lngR + Math.atan2(Math.sin(bearingR) * Math.sin(distanceToRadius) * Math.cos(latR),
-            Math.cos(distanceToRadius) - Math.sin(latR) * Math.sin(newLatR))
+        val newLatR = asin(sin(latR) * cos(distanceToRadius) +
+                cos(latR) * sin(distanceToRadius) * cos(bearingR))
+        val newLonR = lngR + atan2(sin(bearingR) * sin(distanceToRadius) * cos(latR),
+            cos(distanceToRadius) - sin(latR) * sin(newLatR))
 
         val latNew = Math.toDegrees(newLatR)
         val lngNew = Math.toDegrees(newLonR)
@@ -37,16 +38,16 @@ object GeoUtils {
     }
 
 
-    fun distanceBetweenTwoCoordinates(latlng1: LatLng, latlng2: LatLng): Double {
+    fun distanceBetweenTwoCoordinates(latLng1: LatLng, latLng2: LatLng): Double {
         val earthRadius = 6378.1
-        val lat1 = Math.toRadians(latlng1.latitude)
-        val lon1 = Math.toRadians(latlng1.longitude)
-        val lat2 = Math.toRadians(latlng2.latitude)
-        val lon2 = Math.toRadians(latlng2.longitude)
+        val lat1 = Math.toRadians(latLng1.latitude)
+        val lon1 = Math.toRadians(latLng1.longitude)
+        val lat2 = Math.toRadians(latLng2.latitude)
+        val lon2 = Math.toRadians(latLng2.longitude)
         val dLat = lat2 - lat1
         val dLon = lon2 - lon1
-        val a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) * Math.sin(dLon / 2)
-        val c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+        val a = sin(dLat / 2) * sin(dLat / 2) + cos(lat1) * cos(lat2) * sin(dLon / 2) * sin(dLon / 2)
+        val c = 2 * atan2(sqrt(a), sqrt(1 - a))
         return earthRadius * c * 1000
     }
 
@@ -54,6 +55,6 @@ object GeoUtils {
         val x = worldPos1.x - worldPos2.x
         val y = worldPos1.y - worldPos2.y
         val z = worldPos1.z - worldPos2.z
-        return Math.sqrt((x * x + y * y + z * z).toDouble()).toFloat()
+        return sqrt((x * x + y * y + z * z).toDouble()).toFloat()
     }
 }

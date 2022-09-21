@@ -11,7 +11,7 @@ import kotlin.system.exitProcess
 
 object FileLog {
 
-    const val FILE_NAME = "ArNavLog.txt"
+    private const val FILE_NAME = "ArNavLog.txt"
     private const val FATAL_TAG = "FATAL"
     private const val MAX_FILE_LINES = 3000
     private const val MAX_RANK = 10

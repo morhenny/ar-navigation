@@ -56,7 +56,7 @@ import kotlin.math.atan2
 class AugmentedRealityFragment : Fragment() {
     companion object {
         private const val TAG = "AR-Frag"
-        private const val RENDER_DISTANCE = 250f //default is 30
+        private const val RENDER_DISTANCE = 200f //default is 30
         private const val H_ACC_0 = 0.0
         private const val H_ACC_1 = 10
         private const val H_ACC_2 = 2.5
@@ -74,16 +74,16 @@ class AugmentedRealityFragment : Fragment() {
         private const val HEAD_ACC_4 = 2.5
         private const val IGNORE_GEO_ACC = true
         private const val SEARCH_RADIUS = 200.0
+        private const val MAX_RESOLVE_DISTANCE = 10f
         private const val RENDER_PREVIEW_ARROW_IN_SEARCH_DISTANCE = 4f
         private const val DISTANCE_TO_UPDATE_FETCHED_PLACES = 2f
-
     }
 
     enum class AppState {
         STARTING_AR, //"Searching surfaces"
         PLACE_ANCHOR,
         WAITING_FOR_ANCHOR_CIRCLE,
-        HOSTING, //either go to hosted_success or back to place_anchor
+        HOSTING, //either go to HOST_SUCCESS or back to PLACE_ANCHOR
         HOST_SUCCESS,
         HOST_FAIL,
         PLACE_OBJECT,
@@ -182,7 +182,6 @@ class AugmentedRealityFragment : Fragment() {
 
         sceneView = binding.sceneView
         sceneView.cameraDistance = RENDER_DISTANCE
-        //sceneView.arCameraStream.isDepthOcclusionEnabled = true //this needs to be called after placing is complete
         sceneView.configureSession { _: ArSession, config: Config ->
             config.cloudAnchorMode = Config.CloudAnchorMode.ENABLED
             config.planeFindingMode = Config.PlaneFindingMode.HORIZONTAL //horizontal for now, potentially try out vertical for target later
@@ -193,6 +192,7 @@ class AugmentedRealityFragment : Fragment() {
         }
         sceneView.planeRenderer.planeRendererMode = PlaneRenderer.PlaneRendererMode.RENDER_TOP_MOST
         sceneView.planeRenderer.isShadowReceiver = false
+        sceneView.camera.farClipPlane = RENDER_DISTANCE
 
         sceneView.onArSessionCreated = {
             FileLog.d(TAG, "Session is created: $it")
@@ -613,7 +613,7 @@ class AugmentedRealityFragment : Fragment() {
                 //resolve closest node that is in view
                 placesInRadiusNodeMap.entries.forEach {
                     val distance = GeoUtils.distanceBetweenTwo3dCoordinates(it.value.worldPosition, sceneView.camera.worldPosition)
-                    if (distance < shortestDistance && isNodeInView(it.value)) {
+                    if (distance < shortestDistance && isNodeInView(it.value) && distance < MAX_RESOLVE_DISTANCE) {
                         shortestDistance = distance
                         closestNode = Pair(it.key, it.value)
                     }
@@ -642,6 +642,8 @@ class AugmentedRealityFragment : Fragment() {
                 anchorNode.resolveCloudAnchor(route.cloudAnchorId) { anchor: Anchor, success: Boolean ->
                     cloudAnchor(anchor)
                     binding.arProgressBar.visibility = View.GONE
+                    binding.arIndicatorRight.visibility = View.GONE
+                    binding.arIndicatorLeft.visibility = View.GONE
                     if (success) {
                         FileLog.d(TAG, "Successfully resolved route with id: ${route.cloudAnchorId}")
 
@@ -950,7 +952,7 @@ class AugmentedRealityFragment : Fragment() {
             clear()
         }
         //TODO for debug at the moment
-        binding.arButtonClear.setOnLongClickListener {
+        binding.arInfoText.setOnLongClickListener {
             sceneView.arCameraStream.isDepthOcclusionEnabled = !sceneView.arCameraStream.isDepthOcclusionEnabled
             true
         }
