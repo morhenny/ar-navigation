@@ -143,6 +143,7 @@ class AugmentedRealityFragment : Fragment() {
     private var scale = 1.5f
     private var isTracking = false
     private var placedNew = false
+    private var isShowingTooFarInfo = false
 
     private var isSearchingMode = false
     private var observing: Boolean = false
@@ -230,29 +231,13 @@ class AugmentedRealityFragment : Fragment() {
                 }
             }
 
-            //This was used for Accuracy Testing
-//            arFrame.updatedPlanes.forEach { plane ->
-//                //Calculate distance between planes and resolved objects
-//                if (placedNew) {
-//                    val normalVector = plane.centerPose.yDirection //normal vector of the plane going up
-//                    placedNew = false
-//                    nodeList.forEach {
-//                        //normalVector = it.worldToLocalPosition(normalVector.toVector3()).toFloat3()
-//                        val centerPos = it.worldToLocalPosition(plane.centerPose.position.toVector3()).toFloat3()
-//                        val projectedNode = it.position.minus(normalVector.times((it.position.minus(centerPos)).times(normalVector)))
-//                        val distance = projectedNode.minus(it.position).toVector3().length()
-//                        FileLog.d("O_O", "Distance to plane for this node: $distance")
-//                    }
-//                }
-//            }
-
             earth?.let {
                 if (it.trackingState == TrackingState.TRACKING) {
                     earthIsTrackingLoop(it)
                 }
             } ?: run {
                 earth = sceneView.arSession?.earth
-                Log.d("O_O", "Earth object assigned")
+                FileLog.d(TAG, "Earth object assigned")
             }
         })
 
@@ -278,7 +263,7 @@ class AugmentedRealityFragment : Fragment() {
                 updateState(AppState.RESOLVE_ABLE)
             }
             else -> {
-                FileLog.w("O_O", "Unknown nav state in AR Fragment: ${viewModel.navState}")
+                throw IllegalStateException("Invalid NavState in AugmentedRealityFragment: ${viewModel.navState}")
             }
         }
     }
@@ -327,13 +312,11 @@ class AugmentedRealityFragment : Fragment() {
 
             val distanceBetween = GeoUtils.distanceBetweenTwoCoordinates(lastSearchLatLng, cameraLatLng)
             if (distanceBetween > DISTANCE_TO_UPDATE_FETCHED_PLACES) {
-
                 lifecycleScope.launch {
                     viewModel.fetchPlacesAroundLocation(cameraLatLng, SEARCH_RADIUS)
                 }
                 firstSearchFetched = true
                 lastSearchLatLng = cameraLatLng
-                FileLog.d("O_O", "Searching for places around ${cameraLatLng.latitude}, ${cameraLatLng.longitude}, distance between: $distanceBetween")
             }
 
             //Start observing search results
@@ -342,7 +325,7 @@ class AugmentedRealityFragment : Fragment() {
         } else if (!earthAnchorPlaced && (viewModel.navState == MainViewModel.NavState.MAPS_TO_AR_NAV || viewModel.navState == MainViewModel.NavState.CREATE_TO_AR_TO_TRY)) {
             //Prediction of the cloud anchor location in NAV mode
             viewModel.currentPlace?.let {
-                if (cameraGeospatialPose.horizontalAccuracy < 2) { //TODO potentially change preview render, depending on accuracy and distance to it
+                if (cameraGeospatialPose.horizontalAccuracy < H_ACC_2) {
                     val earthAnchor = earth.createAnchor(it.lat, it.lng, it.alt, 0f, 0f, 0f, 1f)
                     earthAnchorPlaced = true
                     earthNode = ArNode().apply {
@@ -359,7 +342,6 @@ class AugmentedRealityFragment : Fragment() {
             }
         } else if (earthAnchorPlaced && cloudAnchor == null) {
             earthNode?.let {
-                //TODO potentially don't show indicator if out of render distance, but hint instead
                 indicateDirectionIfNotInView(it)
             }
         }
@@ -371,7 +353,6 @@ class AugmentedRealityFragment : Fragment() {
             if (!observing) {
                 observing = true
                 viewModel.placesInRadius.observe(viewLifecycleOwner) {
-                    FileLog.d("O_O", "observing places around ${it.size}")
                     renderObservedPlaces(it)
                 }
             } else if (placesInRadiusInfoNodes.isNotEmpty()) {
@@ -428,7 +409,7 @@ class AugmentedRealityFragment : Fragment() {
         }
     }
 
-    private suspend fun arToJsonString(): String {
+    private fun arToJsonString(): String {
         var result = ""
         cloudAnchorId?.let { id ->
             result = Json.encodeToString(ArRoute(id, pointList))
@@ -465,7 +446,7 @@ class AugmentedRealityFragment : Fragment() {
                     sceneView.arSession?.earth?.let { earth ->
                         if (earth.trackingState == TrackingState.TRACKING) {
                             val cameraGeospatialPose = earth.cameraGeospatialPose
-                            if (IGNORE_GEO_ACC || cameraGeospatialPose.horizontalAccuracy < 5) { //TODO decide threshold for accuracy
+                            if (IGNORE_GEO_ACC || cameraGeospatialPose.horizontalAccuracy < H_ACC_2) {
                                 updateState(AppState.WAITING_FOR_ANCHOR_CIRCLE)
                                 anchorNode = ArModelNode(PlacementMode.DISABLED).apply {
                                     parent = sceneView
@@ -582,12 +563,12 @@ class AugmentedRealityFragment : Fragment() {
                         withContext(Dispatchers.Main) {
                             findNavController().navigate(AugmentedRealityFragmentDirections.actionArFragmentToCreateFragment())
                         }
-                    } ?: FileLog.e(TAG, "Navstate is edit, but currentplace is null in ARFragment ")
+                    } ?: FileLog.e(TAG, "NavState is edit, but currentPlace is null in ARFragment ")
                 }
                 else -> {
                     binding.arProgressBar.visibility = View.GONE
                     binding.arExtendedFab.isEnabled = true
-                    FileLog.e(TAG, "Wrong Navstate onClick Confirm is ${viewModel.navState}")
+                    FileLog.e(TAG, "Wrong NavState onClick Confirm is ${viewModel.navState}")
                 }
             }
         }
@@ -619,7 +600,7 @@ class AugmentedRealityFragment : Fragment() {
                     }
                 }
                 closestNode?.let {
-                    FileLog.d("O_O", "Trying to resolve closest Place: ${it.first.name} ...")
+                    FileLog.d(TAG, "Trying to resolve closest Place: ${it.first.name} ...")
                     val arRoute = jsonToAr(it.first.ardata)
                     resolvedFromSearchMode = true
                     binding.arButtonUndo.visibility = View.VISIBLE
@@ -728,7 +709,10 @@ class AugmentedRealityFragment : Fragment() {
             }
         } else {
             showDirectionIndicator(Indicator.NONE)
-            binding.arInfoText.text = binding.arInfoText.text.toString() + "\n You are too far away from the place!"
+            if (!isShowingTooFarInfo) {
+                binding.arInfoText.text = binding.arInfoText.text.toString() + "\n \n You are too far away from the place!"
+                isShowingTooFarInfo = true
+            }
         }
     }
 
@@ -772,7 +756,7 @@ class AugmentedRealityFragment : Fragment() {
             Matrix.multiplyMV(nodeTranslationNDC, 0, matrix, 0, nodeTranslation, 0)
             return nodeTranslationNDC
         } ?: run {
-            FileLog.w("O_O", "No camera available for isInView check")
+            FileLog.e(TAG, "No camera available for isInView check")
             return FloatArray(4)
         }
     }
@@ -951,7 +935,7 @@ class AugmentedRealityFragment : Fragment() {
         binding.arButtonClear.setOnClickListener {
             clear()
         }
-        //TODO for debug at the moment
+        //toggle occlusion - testing only
         binding.arInfoText.setOnLongClickListener {
             sceneView.arCameraStream.isDepthOcclusionEnabled = !sceneView.arCameraStream.isDepthOcclusionEnabled
             true
@@ -1252,7 +1236,6 @@ class AugmentedRealityFragment : Fragment() {
     }
 
     override fun onStop() {
-        FileLog.d("O_O", "onStop")
         cloudAnchor?.detach()
         sceneView.onStop(this)
         super.onStop()
@@ -1264,8 +1247,6 @@ class AugmentedRealityFragment : Fragment() {
     }
 
     override fun onDestroy() {
-        FileLog.d("O_O", "onDestroy")
-
         //TODO this is only needed in 0.6.0, since it is in sceneView for newer versions
         ResourceManager.getInstance().destroyAllResources()
 

@@ -98,13 +98,11 @@ class CreateFragment : Fragment(), OnMapReadyCallback {
                     inputHdg.setText(viewModel.geoHdg.toString())
                 }
             }
-            else -> FileLog.e("O_O", "Wrong NavState in CreateFragments onCreate")
+            else -> throw IllegalStateException("Impossible NavState in CreateFragments onCreate")
         }
         binding.buttonInputArdata.setOnClickListener {
             if (viewModel.arDataString.isNotBlank()) {
                 viewModel.arDataString = ""
-            } else {
-                FileLog.e("O_O", "wrong app state on click of Redo Route button")
             }
             findNavController().navigate(CreateFragmentDirections.actionCreateFragmentToArFragment())
         }
@@ -218,7 +216,6 @@ class CreateFragment : Fragment(), OnMapReadyCallback {
         } else { //If no anchor location is provided, zoom the map on the users location instead
             locationProvider?.let {
                 it.lastLocation.addOnSuccessListener { location ->
-                    FileLog.d("O_O", "Used new location in create")
                     val latLng = LatLng(location.latitude, location.longitude)
                     val builder = CameraPosition.builder().zoom(18f).target(latLng)
                     map?.animateCamera(CameraUpdateFactory.newCameraPosition(builder.build()))

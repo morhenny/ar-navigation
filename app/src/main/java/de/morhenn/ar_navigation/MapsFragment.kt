@@ -23,7 +23,6 @@ import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.*
 import de.morhenn.ar_navigation.databinding.FragmentMapsBinding
 import de.morhenn.ar_navigation.databinding.InfoWindowBinding
-import de.morhenn.ar_navigation.util.FileLog
 import de.morhenn.ar_navigation.util.Utils
 
 class MapsFragment : Fragment(), OnMapReadyCallback {
@@ -48,7 +47,6 @@ class MapsFragment : Fragment(), OnMapReadyCallback {
         _binding = FragmentMapsBinding.inflate(inflater, container, false)
         infoWindowAdapter = MyInfoWindowAdapter(InfoWindowBinding.inflate(inflater, container, false), viewModel)
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner) {
-            FileLog.d("O_O", "Exiting app onBackPress")
             requireActivity().finish()
         }
         return binding.root
