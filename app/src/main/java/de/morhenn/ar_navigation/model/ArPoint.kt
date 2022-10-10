@@ -1,6 +1,6 @@
 package de.morhenn.ar_navigation.model
 
-import de.morhenn.ar_navigation.AugmentedRealityFragment
+import de.morhenn.ar_navigation.fragments.AugmentedRealityFragment
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Rotation
 import kotlinx.serialization.Serializable

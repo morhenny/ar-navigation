@@ -5,7 +5,7 @@
     app:startDestination="@id/mapsFragment">
     <fragment
         android:id="@+id/mapsFragment"
-        android:name="de.morhenn.ar_navigation.MapsFragment"
+        android:name="de.morhenn.ar_navigation.fragments.MapsFragment"
         android:label="MapsFragment">
         <action
             android:id="@+id/action_mapsFragment_to_arFragment"
@@ -16,7 +16,7 @@
     </fragment>
     <fragment
         android:id="@+id/arFragment"
-        android:name="de.morhenn.ar_navigation.AugmentedRealityFragment"
+        android:name="de.morhenn.ar_navigation.fragments.AugmentedRealityFragment"
         android:label="ArFragment">
         <action
             android:id="@+id/action_arFragment_to_createFragment"
@@ -26,7 +26,7 @@
     </fragment>
     <fragment
         android:id="@+id/createFragment"
-        android:name="de.morhenn.ar_navigation.CreateFragment"
+        android:name="de.morhenn.ar_navigation.fragments.CreateFragment"
         android:label="CreateFragment">
         <action
             android:id="@+id/action_createFragment_to_mapsFragment"

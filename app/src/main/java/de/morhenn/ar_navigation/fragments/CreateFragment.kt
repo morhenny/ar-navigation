@@ -1,4 +1,4 @@
-package de.morhenn.ar_navigation
+package de.morhenn.ar_navigation.fragments
 
 import android.annotation.SuppressLint
 import android.graphics.Color
@@ -16,6 +16,8 @@ import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.*
+import de.morhenn.ar_navigation.MainViewModel
+import de.morhenn.ar_navigation.R
 import de.morhenn.ar_navigation.databinding.FragmentCreateBinding
 import de.morhenn.ar_navigation.model.ArRoute
 import de.morhenn.ar_navigation.persistance.NewPlace
@@ -83,7 +85,6 @@ class CreateFragment : Fragment(), OnMapReadyCallback {
                         buttonTryArRoute.visibility = View.VISIBLE
                     }
                 }
-
             }
             MainViewModel.NavState.MAPS_TO_AR_NEW -> {
                 with(binding) {
@@ -162,7 +163,6 @@ class CreateFragment : Fragment(), OnMapReadyCallback {
         }
         super.onViewCreated(view, savedInstanceState)
     }
-
 
     @SuppressLint("MissingPermission")
     override fun onMapReady(googleMap: GoogleMap) {

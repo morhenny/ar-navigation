@@ -1,9 +1,11 @@
-package de.morhenn.ar_navigation
+package de.morhenn.ar_navigation.adapter
 
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
+import de.morhenn.ar_navigation.R
 import de.morhenn.ar_navigation.databinding.ItemArNodesListBinding
+import de.morhenn.ar_navigation.fragments.AugmentedRealityFragment
 import de.morhenn.ar_navigation.model.ArPoint
 import de.morhenn.ar_navigation.util.Utils
 

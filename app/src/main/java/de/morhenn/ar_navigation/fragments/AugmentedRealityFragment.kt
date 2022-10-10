@@ -1,4 +1,4 @@
-package de.morhenn.ar_navigation
+package de.morhenn.ar_navigation.fragments
 
 import android.net.Uri.parse
 import android.opengl.Matrix
@@ -19,7 +19,11 @@ import com.google.ar.sceneform.rendering.ModelRenderable
 import com.google.ar.sceneform.rendering.Renderable
 import com.google.ar.sceneform.rendering.ResourceManager
 import com.google.ar.sceneform.rendering.ViewRenderable
-import de.morhenn.ar_navigation.AugmentedRealityFragment.ModelName.*
+import de.morhenn.ar_navigation.AnchorHostingPoint
+import de.morhenn.ar_navigation.MainViewModel
+import de.morhenn.ar_navigation.adapter.MyListAdapter
+import de.morhenn.ar_navigation.R
+import de.morhenn.ar_navigation.fragments.AugmentedRealityFragment.ModelName.*
 import de.morhenn.ar_navigation.databinding.FragmentAugmentedRealityBinding
 import de.morhenn.ar_navigation.model.ArPoint
 import de.morhenn.ar_navigation.model.ArRoute
@@ -185,11 +189,10 @@ class AugmentedRealityFragment : Fragment() {
         sceneView.cameraDistance = RENDER_DISTANCE
         sceneView.configureSession { _: ArSession, config: Config ->
             config.cloudAnchorMode = Config.CloudAnchorMode.ENABLED
-            config.planeFindingMode = Config.PlaneFindingMode.HORIZONTAL //horizontal for now, potentially try out vertical for target later
+            config.planeFindingMode = Config.PlaneFindingMode.HORIZONTAL
             config.lightEstimationMode = Config.LightEstimationMode.AMBIENT_INTENSITY
             config.geospatialMode = Config.GeospatialMode.ENABLED
             config.planeFindingEnabled = true
-            //config.instantPlacementEnabled = false
         }
         sceneView.planeRenderer.planeRendererMode = PlaneRenderer.PlaneRendererMode.RENDER_TOP_MOST
         sceneView.planeRenderer.isShadowReceiver = false
@@ -206,7 +209,7 @@ class AugmentedRealityFragment : Fragment() {
 
             if (arFrame.isTrackingPlane && !isTracking) {
                 isTracking = true
-                binding.arExtendedFab.isEnabled = true //!isSearchingMode
+                binding.arExtendedFab.isEnabled = true
                 if (!navOnly && !isSearchingMode) {
                     anchorCircle = AnchorHostingPoint(requireContext(), Filament.engine, sceneView.renderer.filamentScene)
                     anchorCircle.enabled = true

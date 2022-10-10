@@ -1,7 +1,6 @@
-package de.morhenn.ar_navigation
+package de.morhenn.ar_navigation.fragments
 
 import android.Manifest
-import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -21,12 +20,14 @@ import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.*
+import de.morhenn.ar_navigation.MainViewModel
+import de.morhenn.ar_navigation.R
+import de.morhenn.ar_navigation.adapter.MyInfoWindowAdapter
 import de.morhenn.ar_navigation.databinding.FragmentMapsBinding
 import de.morhenn.ar_navigation.databinding.InfoWindowBinding
 import de.morhenn.ar_navigation.util.Utils
 
 class MapsFragment : Fragment(), OnMapReadyCallback {
-
 
     //best practise for using binding
     private var _binding: FragmentMapsBinding? = null
@@ -90,7 +91,6 @@ class MapsFragment : Fragment(), OnMapReadyCallback {
             findNavController().navigate(MapsFragmentDirections.actionMapsFragmentToArFragment())
         }
         binding.mapArSearchFab.setOnClickListener {
-            // viewModel.updateCurrentPlace(selectedMarker!!) potentially highlight marker in AR
             viewModel.navState = MainViewModel.NavState.MAPS_TO_AR_SEARCH
             findNavController().navigate(MapsFragmentDirections.actionMapsFragmentToArFragment())
         }
@@ -107,12 +107,10 @@ class MapsFragment : Fragment(), OnMapReadyCallback {
      * it inside the SupportMapFragment. This method will only be triggered once the user has
      * installed Google Play services and returned to the app.
      */
-    @SuppressLint("MissingPermission")
     override fun onMapReady(googleMap: GoogleMap) {
         map = googleMap.apply {
 
             setInfoWindowAdapter(infoWindowAdapter)
-            moveCamera(CameraUpdateFactory.newLatLng(LatLng(52.0, 13.0)))
 
             uiSettings.isMyLocationButtonEnabled = false
             uiSettings.isCompassEnabled = true
@@ -159,7 +157,6 @@ class MapsFragment : Fragment(), OnMapReadyCallback {
             }
         }
 
-
         viewModel.places.observe(viewLifecycleOwner) {
             binding.mapRouteFab.visibility = View.GONE
             binding.mapAddFab.setImageResource(R.drawable.ic_baseline_add_location_alt_24)
@@ -195,8 +192,6 @@ class MapsFragment : Fragment(), OnMapReadyCallback {
         selectedMarker = null
     }
 
-
-    @SuppressLint("MissingPermission")
     private fun zoomOnMyLocation() {
         viewModel.fetchPlaces()
         locationProvider?.let {

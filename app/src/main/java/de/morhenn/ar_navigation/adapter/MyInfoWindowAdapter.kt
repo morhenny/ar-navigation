@@ -1,8 +1,9 @@
-package de.morhenn.ar_navigation
+package de.morhenn.ar_navigation.adapter
 
 import android.view.View
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.model.Marker
+import de.morhenn.ar_navigation.MainViewModel
 import de.morhenn.ar_navigation.databinding.InfoWindowBinding
 
 class MyInfoWindowAdapter(var binding: InfoWindowBinding, var viewModel: MainViewModel) : GoogleMap.InfoWindowAdapter {
