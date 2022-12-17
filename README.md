@@ -9,7 +9,7 @@ In this video, the core functionality of the app can be seen and is split up int
 2. That route being navigated by
 3. Searching and showing all routes around in AR and from there one route is navigated by
 
-[![](https://yt-embed.herokuapp.com/embed?v=LICAceF-56M)](https://www.youtube.com/watch?v=LICAceF-56M)
+https://www.youtube.com/watch?v=LICAceF-56M
 
 
 ## Setup & Usage
